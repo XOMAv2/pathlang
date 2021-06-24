@@ -252,11 +252,11 @@ Arguments then and else can be any valid expression. If test returns logical tru
 will be evaluated otherwise else expression will be evaluated.
 ```clojure
 (if (= 1 2)
-(+ 1 2)
-(- 2 1)) => 1
+ (+ 1 2)
+ (- 2 1)) => 1
 (if (= 1 1)
-(+ 1 2)
-(- 2 1)) => 3
+  (+ 1 2)
+ (- 2 1)) => 3
 ```
 
 ### `select-keys` - (fn args & args)
@@ -265,14 +265,14 @@ value and returns collection of keyword which must be gathered from processing e
 works with maps and datomic entities.
 ```clojure
 (select-keys (list :x :y)
-            ({:x 1 :z 2} {:y 1 :w 2})
-        {:x 3 :y 4}) => ({:x 1} {:y 1} {:x 3 :y 4})
+             ({:x 1 :z 2} {:y 1 :w 2})
+             {:x 3 :y 4}) => ({:x 1} {:y 1} {:x 3 :y 4})
 (select-keys (if (= (:x %) 1)
-            (list :y)
-    (list :z))
-        ({:x 1 :y 2}
-        {:x 2 :y 3}
-        {:x 3 :z 4})) => ({:y 2} {} {:z 4})
+               (list :y)
+               (list :z))
+             ({:x 1 :y 2}
+              {:x 2 :y 3}
+              {:x 3 :z 4})) => ({:y 2} {} {:z 4})
 ```
 
 ### `count` - (args & args)
@@ -285,7 +285,7 @@ of all collection lengths. Atomic value is assumed to be a collection with one e
 ```
 
 ### `now` - ()
-Accepts now arguments. Returns now datetime.
+Accepts no arguments. Returns now datetime.
 ```clojure
 (now) => #inst "2021-01-01T20:00"
 ```
