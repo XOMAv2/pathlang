@@ -194,8 +194,8 @@ sum of all elements of all collection.
 (sum 1 2 (3)) => 6
 (sum (1 2 3)) => 6
 (sum (1 2 3) 1) => 7
-(+ {:x 1} {:y 2}) => throws error
-(+ 2 "1") => throws error
+(sum {:x 1} {:y 2}) => throws error
+(sum 2 "1") => throws error
 ```
 
 ### `product` - (arg1 arg2 & args)
@@ -253,11 +253,11 @@ Arguments then and else can be any valid expression. If test returns logical tru
 will be evaluated otherwise else expression will be evaluated.
 ```clojure
 (if (= 1 2)
- (+ 1 2)
- (- 2 1)) => 1
+  (+ 1 2)
+  (- 2 1)) => 1
 (if (= 1 1)
   (+ 1 2)
- (- 2 1)) => 3
+  (- 2 1)) => 3
 ```
 
 ### `select-keys` - (fn args & args)
