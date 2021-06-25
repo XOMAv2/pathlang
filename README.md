@@ -13,7 +13,7 @@
 4. Expression can accept several arguments and any argument can be a collection.
 5. Expression can accept another expression as argument and it will be evaluated for getting it's value and using it as argument to upper expression.
 6. There are context values:
-    * $ - root element (required item);
+    * $ - root element;
     * % - current element in expressions that are used inside filter, map, etc;
 7. Dynamic context must be passed and it must contain $ (root element), used external functions. It can contain other elements that were used inside expressions.
     ```clojure
@@ -33,6 +33,7 @@ value, a collection of datomic entities, maps or nil values. Throws error if ato
 value isn't datomic entity or map.
 ```clojure
 (:foo {:foo 1} ({:foo 2} {:bar 1}) ()) => (1 2 nil)
+(:foo {:foo 1} ({:foo 2} {:foo 4}) ()) => (1 2 4 nil)
 ```
  
 ### `=` - (arg1 arg2 & args)
@@ -152,9 +153,9 @@ values have different types. Supports numbers. Returns product of all elements.
 ```clojure
 (* 1 2) => 2
 (* 1 2 (3)) => 6
-(+ ("x") "y" ("z")) => throws error
-(+ {:x 1} {:y 2}) => throws error
-(+ 2 "1") => throws error
+(* ("x") "y" ("z")) => throws error
+(* {:x 1} {:y 2}) => throws error
+(* 2 "1") => throws error
 ```
 
 ### `-` - (arg1 arg2 & args)
@@ -202,13 +203,13 @@ Accepts two or more arguments which can be an atomic value or a collection of at
 values. Throws error if not all atomic values have same types. Supports numbers. Returns
 product of all elements of all collection.
 ```clojure
-(* 1 2) => 2
-(* 1 2 (3)) => 6
-(* (1 2 3)) => 6
-(* (1 2 3) 4) => 24
-(* ("x") "y" ("z")) => throws error
-(* {:x 1} {:y 2}) => throws error
-(* 2 "1") => throws error
+(product 1 2) => 2
+(product 1 2 (3)) => 6
+(product (1 2 3)) => 6
+(product (1 2 3) 4) => 24
+(product ("x") "y" ("z")) => throws error
+(product {:x 1} {:y 2}) => throws error
+(product 2 "1") => throws error
 ```
 
 ### `list` - (& args)
