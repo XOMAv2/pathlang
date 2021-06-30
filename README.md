@@ -139,7 +139,7 @@ elements.
 ```clojure
 (+ 1 2) => 3
 (+ 1 2 (3)) => 6
-(+ (date 2010 10 10) (hours 8) (minutes 10)) => #inst "2010-10-10T8:10:00"
+(+ (date 2010 10 10) (hours 8) (minutes 10)) => #inst "2010-10-10T08:10:00"
 (+ ("x") "y" ("z")) => "xyz"
 (+ {:x 1} {:y 2}) => throws error
 (+ 2 "1") => throws error
