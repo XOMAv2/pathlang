@@ -64,3 +64,18 @@
    (pl-eval expression context)))
 
 #_(evaluate 'ext/kek {'$ 42 'ext/kek (fn [a] a)})
+
+#_(defmacro evaluate
+  "Wrapper over the pl-eval function for argument validation."
+  ([expression] `(evaluate ~expression {}))
+  ([expression context]
+   (let [context (help/map-value eval context)]
+     (when (not (s/valid? ::pls/expression expression))
+       (throw (Exception. (str "Pathlang syntax exception in the evaluation expression.\n"
+                               (help/beautiful-spec-explain ::pls/expression expression)))))
+     (when (not (s/valid? ::pls/context context))
+       (throw (Exception. (str "Pathlang syntax exception in the evaluation context.\n"
+                               (help/beautiful-spec-explain ::pls/context context)))))
+     `(pl-eval '~expression '~context))))
+
+#_(evaluate ext/kek {$ 24 ext/kek (fn [a] a)})
