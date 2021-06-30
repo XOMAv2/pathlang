@@ -1,6 +1,6 @@
 (ns pathlang.core
   (:require [clojure.spec.alpha :as s]
-            [pathlang.helpers :refer [not-coll?]]
+            [pathlang.helpers :as help]
             [pathlang.spec :as pls]))
 
 (def std-fns #{'list 'if 'count ; :keyword :implicit-list :value
@@ -13,7 +13,7 @@
 
 (defn get-fn
   [expression context]
-  (if (not-coll? expression)
+  (if (help/not-coll? expression)
     :value
     (let [first-el (first expression)]
       (cond (contains? std-fns first-el) first-el
@@ -49,11 +49,18 @@
 
 (defmethod pl-eval :default
   [_ _]
-  (throw (Exception. "Syntax error.")))
+  (throw (Exception. "Pathlang syntax exception.")))
 
-(defn evaluate [expression context]
-  {:pre [(s/valid? ::pls/expression expression)
-         (s/valid? ::pls/context context)]}
-  (pl-eval expression context))
+(defn evaluate
+  "Wrapper over the pl-eval function for argument validation."
+  ([expression] (evaluate expression {}))
+  ([expression context]
+   (when (not (s/valid? ::pls/expression expression))
+     (throw (Exception. (str "Pathlang syntax exception in the evaluation expression.\n"
+                             (help/beautiful-spec-explain ::pls/expression expression)))))
+   (when (not (s/valid? ::pls/context context))
+     (throw (Exception. (str "Pathlang syntax exception in the evaluation context.\n"
+                             (help/beautiful-spec-explain ::pls/context context)))))
+   (pl-eval expression context)))
 
-#_(evaluate 'ext/kek {'ext/kek (fn [a] a)})
+#_(evaluate 'ext/kek {'$ 42 'ext/kek (fn [a] a)})
