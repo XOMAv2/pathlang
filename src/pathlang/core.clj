@@ -13,13 +13,13 @@
 
 (defn get-fn
   [expression context]
-  (if (help/not-coll? expression)
-    :value
+  (if (list? expression)
     (let [first-el (first expression)]
       (cond (contains? std-fns first-el) first-el
             (keyword? first-el) :keyword
             (contains? (dissoc context '$) first-el) :user-fn
-            :else :implicit-list)))) ; ???: list or quote?
+            :else :implicit-list)) ; ???: list or quote?
+    :value))
 
 (defmulti ^:private pl-eval
   #'get-fn)
