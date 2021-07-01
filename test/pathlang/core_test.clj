@@ -6,9 +6,23 @@
   (is (= '(1 2 nil)   (core/evaluate '(:foo {:foo 1} ({:foo 2} {:bar 1}) ()))))
   (is (= '(1 2 4 nil) (core/evaluate '(:foo {:foo 1} ({:foo 2} {:foo 4}) ())))))
 
-(deftest implicit-list-test)
+(deftest implicit-list-test
+  (is (= '(1 2)          (core/evaluate '(1 2))))
+  (is (= '(1 2 (3))      (core/evaluate '(1 2 (3)))))
+  (is (= '(1 "2" {:x 1}) (core/evaluate '(1 "2" {:x 1}))))
+  (is (= '()             (core/evaluate '()))))
 
-(deftest value-test)
+(deftest value-test
+  (is (= '5              (core/evaluate '5)))
+  (is (= 'nil            (core/evaluate 'nil)))
+  (is (= '\newline       (core/evaluate '\newline)))
+  (is (= '"some str"     (core/evaluate '"some str")))
+  (is (= {3 -1}          (core/evaluate '{(+ 1 2) (- 1 2)})))
+  (is (= '()             (core/evaluate '())))
+  (is (= ':keyword       (core/evaluate ':keyword)))
+  (is (= 'q-symbol       (core/evaluate ''q-symbol)))
+  (is (thrown? Exception (core/evaluate 'unq-symbol)))
+  (is (= 42              (core/evaluate '$ {'$ 42}))))
 
 (deftest list-test
   (is (= '(1 2)          (core/evaluate '(list 1 2))))
@@ -23,6 +37,7 @@
   (is (= 3 (core/evaluate '(if (= 1 1)
                              (+ 1 2)
                              (- 2 1))))))
+; ???: more args or less args.
 
 (deftest count-test
   (is (= 3 (core/evaluate '(count (1 2 3)))))
@@ -30,6 +45,7 @@
   (is (= 4 (core/evaluate '(count (1) (2 3) 4)))))
 ; ???: (count nil)
 ; ???: (count (nil nil 3))
+; ???: (count (1 2 3 ()) 4 ())
 
 (deftest =-test
   (is (=       false     (core/evaluate '(= "red" ("green") "blue"))))
