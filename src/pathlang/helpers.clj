@@ -19,3 +19,10 @@
                   {:print-specs? false
                    :show-valid-values? true}))
 
+(defn flatten-top-level [coll & {:keys [keep-empty-lists]
+                                 :or {keep-empty-lists false}}]
+  (mapcat #(cond
+             (and keep-empty-lists (sequential? %) (empty? %)) (list ())
+             (sequential? %) %
+             :else (list %))
+          coll))
