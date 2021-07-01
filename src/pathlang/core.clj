@@ -53,6 +53,118 @@
     (pl-eval t-branch context)
     (pl-eval f-branch context)))
 
+(defmethod pl-eval 'count
+  [[_ & args] context]
+  (count args))
+
+(defmethod pl-eval '=
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'not=
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '>
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '<
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '>=
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '<=
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '+
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '*
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '-
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval '/
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'sum
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'product
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'filter
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'map
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'select-keys
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'now
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'years
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'months
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'days
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'hours
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'minutes
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'year-start
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'month-start
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'day-start
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'date
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'datetime
+  [[_ & args] context]
+  nil)
+
+(defmethod pl-eval 'at-zone
+  [[_ & args] context]
+  nil)
+
 (defmethod pl-eval :user-fn
   [[fn-name & args] context]
   nil)
