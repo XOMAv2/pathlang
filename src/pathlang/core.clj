@@ -32,8 +32,9 @@
 
 (defmethod pl-eval :keyword
   [[keyword & args] context]
-  (let [args (map #(pl-eval % context) args)]
-    nil))
+  (let [args (map #(pl-eval % context) args)
+        args (help/flatten-top-level args :keep-empty-lists true)]
+    (map #(get % keyword) args)))
 
 (defmethod pl-eval 'list
   [[_ & args] context]
@@ -42,6 +43,15 @@
 (defmethod pl-eval :implicit-list
   [expression context]
   (map #(pl-eval % context) expression))
+
+(defmethod pl-eval 'if
+  [[_ test t-branch f-branch & rest] context]
+  (when (seq rest)
+    (throw (Exception. (str "Pathlang syntax exception."
+                            "An if expression cannot take more than 3 arguments"))))
+  (if (pl-eval test context)
+    (pl-eval t-branch context)
+    (pl-eval f-branch context)))
 
 (defmethod pl-eval :user-fn
   [[fn-name & args] context]
