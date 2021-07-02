@@ -55,7 +55,7 @@
 
 (defmethod pl-eval 'count
   [[_ & args] context]
-  (count args))
+  (apply + (map #(if (list? %) (count %) 1) args)))
 
 (defmethod pl-eval '=
   [[_ & args] context]

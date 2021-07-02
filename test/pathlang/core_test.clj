@@ -42,7 +42,8 @@
 (deftest count-test
   (is (= 3 (core/evaluate '(count (1 2 3)))))
   (is (= 3 (core/evaluate '(count 1 2 3))))
-  (is (= 4 (core/evaluate '(count (1) (2 3) 4)))))
+  (is (= 4 (core/evaluate '(count (1) (2 3) 4))))
+  (is (= 5 (core/evaluate '(count () nil (1 2 3 ()))))))
 ; ???: (count nil)
 ; ???: (count (nil nil 3))
 ; ???: (count (1 2 3 ()) 4 ())
