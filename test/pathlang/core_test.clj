@@ -5,6 +5,7 @@
 (deftest keyword-test
   (is (= '(1 2 nil)   (core/evaluate '(:foo {:foo 1} ({:foo 2} {:bar 1}) ()))))
   (is (= '(1 2 4 nil) (core/evaluate '(:foo {:foo 1} ({:foo 2} {:foo 4}) ())))))
+; ???: (:foo {:foo 1} ({:foo 2} {:bar 1}) ()) => (1 2 nil nil)
 
 (deftest implicit-list-test
   (is (= '(1 2)          (core/evaluate '(1 2))))

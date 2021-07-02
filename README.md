@@ -278,7 +278,7 @@ works with maps and datomic entities.
 
 ### `count` - (args & args)
 Accepts one or more arguments. Each argument can be an atomic value or collection. Returns sum
-of all collection lengths. Atomic value is assumed to be a collection with one eleemtn.
+of all collection lengths. Atomic value is assumed to be a collection with one element.
 ```clojure
 (count (1 2 3)) => 3
 (count 1 2 3) => 3
