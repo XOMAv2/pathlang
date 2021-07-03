@@ -67,53 +67,123 @@
   [[_ & args] context]
   (apply + (map #(if (seq? %) (count %) 1) args)))
 
+(defn check-and-flatten-args [args & {:keys [ignore-nil]
+                                      :or {ignore-nil false}}]
+  (let [_ (when (not (help/each-arg-a-val-or-a-single-val-coll? args))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each function argument must be a value or "
+                                    "a collection of a single value."))))
+        args (help/flatten-top-level args)
+        _ (when (< (count args) 2)
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Function accepts two or more arguments."))))
+        _ (when (not (help/same-top-level-type? args :ignore-nil ignore-nil))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each atomic value must have the same type."))))]
+    args))
+
 (defmethod pl-eval '=
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args :ignore-nil true)]
+    (apply = args)))
 
 (defmethod pl-eval 'not=
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args :ignore-nil true)]
+    (apply not= args)))
 
 (defmethod pl-eval '>
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)]
+    (apply > args)))
 
 (defmethod pl-eval '<
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)]
+    (apply < args)))
 
 (defmethod pl-eval '>=
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)]
+    (apply >= args)))
 
 (defmethod pl-eval '<=
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)]
+    (apply <= args)))
 
 (defmethod pl-eval '+
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)
+        arg1 (first args)]
+    (cond
+      (number? arg1) (apply + args)
+      (string? arg1) (apply str args)
+      ; ???: date representation
+      :else (throw (Exception. (str "Pathlang syntax exception. "
+                                    "The + function supports only numbers, strings, and dates."))))))
 
 (defmethod pl-eval '*
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)]
+    (if (number? (first args))
+      (apply * args)
+      (throw (Exception. (str "Pathlang syntax exception. "
+                              "The * function supports only numbers."))))))
 
 (defmethod pl-eval '-
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)
+        arg1 (first args)]
+    (cond
+      (number? arg1) (apply - args)
+      ; ???: date representation
+      :else (throw (Exception. (str "Pathlang syntax exception. "
+                                    "The - function supports only numbers and dates."))))))
 
 (defmethod pl-eval '/
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (check-and-flatten-args args)
+        arg1 (first args)]
+    (cond
+      (number? arg1) (apply / args)
+      ; ???: date representation and what to do with them?
+      :else (throw (Exception. (str "Pathlang syntax exception. "
+                                    "The / function supports only numbers and dates."))))))
 
 (defmethod pl-eval 'sum
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (help/flatten-top-level args)
+        _ (when (not (help/same-top-level-type? args))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each atomic value must have the same type."))))]
+    (if (number? (first args))
+      (apply + args)
+      (throw (Exception. (str "Pathlang syntax exception. "
+                              "The sum function supports only numbers."))))))
 
 (defmethod pl-eval 'product
   [[_ & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        args (help/flatten-top-level args)
+        _ (when (not (help/same-top-level-type? args))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each atomic value must have the same type."))))]
+    (if (number? (first args))
+      (apply * args)
+      (throw (Exception. (str "Pathlang syntax exception. "
+                              "The product function supports only numbers."))))))
 
 (defmethod pl-eval 'filter
   [[_ & args] context]
