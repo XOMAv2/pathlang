@@ -30,5 +30,7 @@
 (defn each-arg-a-val-or-a-single-val-coll? [args]
   (not (some #(and (seq? %) (not= 1 (count %))) args)))
 
-(defn same-top-level-type? [coll]
-  (apply = (map type coll)))
+(defn same-top-level-type? [coll & {:keys [ignore-nil]
+                                    :or {ignore-nil false}}]
+  (let [coll (if ignore-nil (filter some? coll) coll)]
+    (apply = (map type coll))))
