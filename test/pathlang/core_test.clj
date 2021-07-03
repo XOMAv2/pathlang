@@ -112,14 +112,17 @@
                          (core/evaluate '(+ (date 2010 10 10) (hours 8) (minutes 10)))))
   (is (=       "xyz"     (core/evaluate '(+ ("x") "y" ("z")))))
   (is (thrown? Exception (core/evaluate '(+ {:x 1} {:y 2}))))
-  (is (thrown? Exception (core/evaluate '(+ 2 "1")))))
+  (is (thrown? Exception (core/evaluate '(+ 2 "1"))))
+  (is (thrown? Exception (core/evaluate '(+ 2 nil)))) ; ???: nil + number
+  (is (thrown? Exception (core/evaluate '(+ "x" nil))))) ; ???: nil + string
 
 (deftest *-test
   (is (=       2         (core/evaluate '(* 1 2))))
   (is (=       6         (core/evaluate '(* 1 2 (3)))))
   (is (thrown? Exception (core/evaluate '(* ("x") "y" ("z")))))
   (is (thrown? Exception (core/evaluate '(* {:x 1} {:y 2}))))
-  (is (thrown? Exception (core/evaluate '(* 2 "1")))))
+  (is (thrown? Exception (core/evaluate '(* 2 "1"))))
+  (is (thrown? Exception (core/evaluate '(* 2 nil))))) ; ???: nil
 
 (deftest subtraction-test ; -
   (is (=       -1        (core/evaluate '(- 1 2))))
@@ -127,13 +130,15 @@
   (is (=       #inst "2010-10-10T00:00:00"
                          (core/evaluate '(- (datetime 2010 10 10 8 10) (hours 8) (minutes 10)))))
   (is (thrown? Exception (core/evaluate '(- {:x 1} {:y 2}))))
-  (is (thrown? Exception (core/evaluate '(- 2 "1")))))
+  (is (thrown? Exception (core/evaluate '(- 2 "1"))))
+  (is (thrown? Exception (core/evaluate '(- 2 nil))))) ; ???: nil
 
-(deftest division-test
+(deftest division-test ; /
   (is (=       2         (core/evaluate '(/ 4 2))))
   (is (=       3         (core/evaluate '(/ 30 2 5))))
   (is (thrown? Exception (core/evaluate '(/ {:x 1} {:y 2}))))
-  (is (thrown? Exception (core/evaluate '(/ 2 "1"))))) ; /
+  (is (thrown? Exception (core/evaluate '(/ 2 "1"))))
+  (is (thrown? Exception (core/evaluate '(/ 2 (nil)))))) ; ???: nil
 
 (deftest sum-test
   (is (=       3         (core/evaluate '(sum 1 2))))
@@ -141,7 +146,8 @@
   (is (=       6         (core/evaluate '(sum (1 2 3)))))
   (is (=       7         (core/evaluate '(sum (1 2 3) 1))))
   (is (thrown? Exception (core/evaluate '(sum {:x 1} {:y 2}))))
-  (is (thrown? Exception (core/evaluate '(sum 2 "1")))))
+  (is (thrown? Exception (core/evaluate '(sum 2 "1"))))
+  (is (thrown? Exception (core/evaluate '(sum 2 (2 nil)))))) ; ???: nil
 
 (deftest product-test
   (is (=       2         (core/evaluate '(product 1 2))))
@@ -150,7 +156,8 @@
   (is (=       24        (core/evaluate '(product (1 2 3) 4))))
   (is (thrown? Exception (core/evaluate '(product ("x") "y" ("z")))))
   (is (thrown? Exception (core/evaluate '(product {:x 1} {:y 2}))))
-  (is (thrown? Exception (core/evaluate '(product 2 "1")))))
+  (is (thrown? Exception (core/evaluate '(product 2 "1"))))
+  (is (thrown? Exception (core/evaluate '(product 2 (2 nil)))))) ; ???: nil
 
 (deftest filter-test
   (is (= '(1 1)           (core/evaluate '(filter (= % 1) (1 2 3) (4 5 6) 1))))
