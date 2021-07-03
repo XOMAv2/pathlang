@@ -13,7 +13,7 @@
 
 (defn get-fn
   [expression context]
-  (if (list? expression)
+  (if (seq? expression)
     (let [first-el (first expression)]
       (cond (contains? std-fns first-el) first-el
             (keyword? first-el) :keyword
@@ -55,7 +55,7 @@
 
 (defmethod pl-eval 'count
   [[_ & args] context]
-  (apply + (map #(if (list? %) (count %) 1) args)))
+  (apply + (map #(if (seq? %) (count %) 1) args)))
 
 (defmethod pl-eval '=
   [[_ & args] context]

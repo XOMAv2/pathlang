@@ -28,7 +28,7 @@
           coll))
 
 (defn each-arg-a-val-or-a-single-val-coll? [args]
-  (not (some #(and (list? %) (not= 1 (count %))) args)))
+  (not (some #(and (seq? %) (not= 1 (count %))) args)))
 
 (defn same-top-level-type? [coll]
   (apply = (map type coll)))
