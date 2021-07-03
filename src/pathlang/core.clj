@@ -13,13 +13,16 @@
 
 (defn get-fn
   [expression context]
-  (if (seq? expression)
-    (let [first-el (first expression)]
-      (cond (contains? std-fns first-el) first-el
-            (keyword? first-el) :keyword
-            (contains? (dissoc context '$) first-el) :user-fn
-            :else :implicit-list)) ; ???: list or quote?
-    :value))
+  (cond (seq? expression)
+        (let [first-el (first expression)]
+          (cond (contains? std-fns first-el) first-el
+                (keyword? first-el) :keyword
+                (contains? (dissoc context '$) first-el) :user-fn
+                :else :implicit-list)) ; ???: list or quote?
+
+        (map? expression) :hash-map
+
+        :else :value))
 
 (defmulti ^:private pl-eval
   #'get-fn)
@@ -29,6 +32,13 @@
   (if (contains? context expression)
     (get context expression)
     expression)) ; ???: what to do with unknown symbols?
+
+(defmethod pl-eval :hash-map
+  [expression context]
+  (->> expression
+       (map (fn [[k v]]
+              [(pl-eval k context) (pl-eval v context)]))
+       (into {})))
 
 (defmethod pl-eval :keyword
   [[keyword & args] context]

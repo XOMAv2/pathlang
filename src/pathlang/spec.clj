@@ -13,11 +13,13 @@
 ; The expression must be a function.
 #_(s/def ::expression
   (s/and list?
-         (s/every (s/or :pl-value #(or (not-coll? %) (map? %))
+         (s/every (s/or :pl-value not-coll?
+                        :pl-hash-map map?
                         :pl-expression ::expression))))
 
 ; An expression can be a function or a value.
 (s/def ::expression
-  (s/or :pl-value #(or (not-coll? %) (map? %))
+  (s/or :pl-value not-coll?
+        :pl-hash-map map?
         :pl-expression (s/and list?
                               (s/every ::expression))))

@@ -18,12 +18,14 @@
   (is (= 'nil            (core/evaluate 'nil)))
   (is (= '\newline       (core/evaluate '\newline)))
   (is (= '"some str"     (core/evaluate '"some str")))
-  (is (= {3 -1}          (core/evaluate '{(+ 1 2) (- 1 2)})))
   (is (= '()             (core/evaluate '())))
   (is (= ':keyword       (core/evaluate ':keyword)))
   (is (= 'q-symbol       (core/evaluate ''q-symbol)))
   (is (thrown? Exception (core/evaluate 'unq-symbol)))
   (is (= 42              (core/evaluate '$ {'$ 42}))))
+
+(deftest hash-map-test
+  (is (= {"xy" 3} (core/evaluate '{(+ "x" "y") (+ 1 $)} {'$ 2}))))
 
 (deftest list-test
   (is (= '(1 2)          (core/evaluate '(list 1 2))))
