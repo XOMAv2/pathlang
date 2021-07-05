@@ -20,7 +20,7 @@
   (is (= '"some str"     (core/evaluate '"some str")))
   (is (= '()             (core/evaluate '())))
   (is (= ':keyword       (core/evaluate ':keyword)))
-  (is (= 'q-symbol       (core/evaluate ''q-symbol)))
+  (is (thrown? Exception (core/evaluate ''q-symbol)))
   (is (thrown? Exception (core/evaluate 'unq-symbol)))
   (is (= 42              (core/evaluate '$ {'$ 42}))))
 

@@ -29,9 +29,14 @@
 
 (defmethod pl-eval :value
   [expression context]
-  (if (contains? context expression)
-    (get context expression)
-    expression)) ; ???: what to do with unknown symbols?
+  (cond (and (symbol? expression) (contains? context expression))
+        (get context expression)
+        
+        (symbol? expression) ; ???: should unknown characters throw exceptions?
+        (throw (Exception. (str "Pathlang runtime exception. "
+                                "Unable to resolve symbol: " expression " in this context.")))
+        
+        :else expression))
 
 (defmethod pl-eval :hash-map
   [expression context]
@@ -58,7 +63,7 @@
   [[_ test t-branch f-branch & rest] context]
   (when (seq rest)
     (throw (Exception. (str "Pathlang syntax exception."
-                            "An if expression cannot take more than 3 arguments"))))
+                            "An if expression cannot take more than 3 arguments."))))
   (if (pl-eval test context)
     (pl-eval t-branch context)
     (pl-eval f-branch context)))
