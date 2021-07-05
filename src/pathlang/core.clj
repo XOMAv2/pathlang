@@ -191,16 +191,56 @@
                               "The product function supports only numbers."))))))
 
 (defmethod pl-eval 'filter
-  [[_ & args] context]
-  nil)
+  [[_ pred & args :as expression] context]
+  (when (< (count expression) 3)
+    (throw (Exception. (str "Pathlang syntax exception. "
+                            "The filter function expects two or more arguments."))))
+  (let [args (map #(pl-eval % context) args)
+        args (help/flatten-top-level args :keep-empty-lists true)]
+    (filter (fn [curr]
+              (let [context (assoc context '% curr)
+                    pred-result (pl-eval pred context)
+                    #_#__ (when (and (seq? pred-result) (> (count pred-result) 1))
+                            (throw (Exception.
+                                    (str "Pathlang runtime exception. "
+                                         "The filter predicate must return atomic value, "
+                                         "empty collection or collection with one element. "
+                                         "Returned " pred-result " on element " curr "."))))]
+                (not (contains? #{false () nil} pred-result))))
+            args)))
 
 (defmethod pl-eval 'map
-  [[_ & args] context]
-  nil)
+  [[_ pred & args :as expression] context]
+  (when (< (count expression) 3)
+    (throw (Exception. (str "Pathlang syntax exception. "
+                            "The map function expects two or more arguments."))))
+  (let [args (map #(pl-eval % context) args)
+        args (help/flatten-top-level args :keep-empty-lists true)
+        result (reduce (fn [acc curr]
+                         (let [context (assoc context '% curr)
+                               pred-result (pl-eval pred context)]
+                           (if (and (seq? pred-result) (seq pred-result))
+                             (into acc pred-result)
+                             (conj acc pred-result))))
+                       [] args)]
+    (apply list result)))
 
-(defmethod pl-eval 'select-keys
-  [[_ & args] context]
-  nil)
+(defmethod pl-eval 'select-keys ; ???: should keys be keywords
+  [[_ pred & args :as expression] context]
+  (when (< (count expression) 3)
+    (throw (Exception. (str "Pathlang syntax exception. "
+                            "The select-keys function expects two or more arguments."))))
+  (let [args (map #(pl-eval % context) args)
+        args (help/flatten-top-level args :keep-empty-lists true)
+        _ (when (or (not (help/same-top-level-type? args))
+                    (not= (type {}) (type (first args)))) ; ???: hash-map or datomic entity
+            (throw (Exception. "Pathlang syntax exception. "
+                               "Each atomic value must be the hash-map.")))]
+    (map (fn [curr]
+           (->> (assoc context '% curr)
+                (pl-eval pred)
+                (select-keys curr)))
+         args)))
 
 (defmethod pl-eval 'now
   [[_ & args] context]

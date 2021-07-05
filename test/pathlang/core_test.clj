@@ -162,11 +162,17 @@
 (deftest filter-test
   (is (= '(1 1)           (core/evaluate '(filter (= % 1) (1 2 3) (4 5 6) 1))))
   (is (= '(1 2 3 4 5 6 7) (core/evaluate '(filter % (1 2 3) (4 5 6 nil false) 7 ()))))
-  (is (= '(1 2)           (core/evaluate '(filter (:x %) ({:x 1} {:x 2}))))))
+  #_(is (= '(1 2)           (core/evaluate '(filter (:x %) ({:x 1} {:x 2}))))) ; ???: whe filter function
+  (is (= '({:x 1} {:x 2}) (core/evaluate '(filter (:x %) ({:x 1} {:x 2}))))) ; ???: returns result of its pred?
+  (is (= '()              (core/evaluate '(filter (filter (= % 2) %) ((0 1)))))) ; ???: why do we care about the number of elements returned by the filter predicate?
+  (is (= '((0 1))         (core/evaluate '(filter (filter (= % 1) %) ((0 1))))))) ; ???: Nested filters with several % symbols.
 
 (deftest map-test
-  (is (= '(2 3 4 5 6) (core/evaluate '(map (+ % 1) (1 2 3) 4 (5)))))
-  (is (= '(1)         (core/evaluate '(map (:x %) {:x 1})))))
+  (is (= '(2 3 4 5 6)   (core/evaluate '(map (+ % 1) (1 2 3) 4 (5)))))
+  (is (= '(1)           (core/evaluate '(map (:x %) {:x 1}))))
+  (is (= '(1 nil)       (core/evaluate '(map (:x %) (({:x 1} {:y 1})))))) ; ???: If mapped value is non-empty collection in will be flatten.
+  (is (= '(0 () nil)    (core/evaluate '(map % 0 () nil)))) ; ???: If mapped value is empty collection it will be remained.
+  (is (= '(2 3 4 5 6 7) (core/evaluate '(map (map (+ 1 %) %) ((1 2 3) (4 5 6))))))) ; ???: Nested maps with several % symbols.
 
 (deftest select-keys-test
   (is (= '({:x 1} {:y 1} {:x 3 :y 4})
@@ -179,7 +185,10 @@
                                         (list :z))
                                       ({:x 1 :y 2}
                                        {:x 2 :y 3}
-                                       {:x 3 :z 4}))))))
+                                       {:x 3 :z 4})))))
+  (is (= '({"x" 1})
+         (core/evaluate '(select-keys ("x")
+                                      ({"x" 1 "y" 2}))))))
 
 (deftest now-test
   (is (= #inst "2021-01-01T20:00" (core/evaluate '(now)))))
