@@ -216,3 +216,14 @@
 (deftest at-zone-test
   ;(is (= #inst "2010-10-10T06:00" (core/evaluate '(at-zone (datetime 2010 10 10 3 0) <Moscow timezone>))))
   )
+
+(deftest user-fn-test
+  (is (= -4              (core/evaluate '(user/fn1 1 2 3 4)
+                                        {'user/fn1 (fn [a b c d] (- (+ a b) (+ c d)))})))
+  (is (= '(2 4 6)        (core/evaluate '(filter (user/fn2 %) (1 2 3) (4 5) 6)
+                                        {'user/fn2 (fn [el] (even? el))})))
+  (is (= "some string"   (core/evaluate '(user/fn3)
+                                        {'user/fn3 (fn [] "some string")})))
+  (is (thrown? Exception (core/evaluate '(user/fn4)
+                                        {'user/fn4 (fn [a b] (* a b))})))
+  (is (thrown? Exception (core/evaluate '(user/fn5)))))

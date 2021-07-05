@@ -252,7 +252,9 @@
 
 (defmethod pl-eval :user-fn
   [[fn-name & args] context]
-  nil)
+  (let [args (map #(pl-eval % context) args)
+        fn-name (pl-eval fn-name context)]
+    (apply fn-name args)))
 
 (defmethod pl-eval :default
   [_ _]
