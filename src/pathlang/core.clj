@@ -1,13 +1,14 @@
 (ns pathlang.core
   (:require [clojure.spec.alpha :as s]
             [pathlang.helpers :as help]
+            [pathlang.time :as time]
             [pathlang.spec :as pls]))
 
 (def std-fns #{'list 'if 'count ; :keyword :implicit-list :value
                '= 'not= '> '< '>= '<=
                '+ '* '- '/ 'sum 'product
                'filter 'map 'select-keys
-               'now 'years 'months 'days 'hours 'minutes
+               'now 'years 'months 'weeks 'days 'hours 'minutes
                'year-start 'month-start 'day-start
                'date 'datetime 'at-zone})
 
@@ -131,7 +132,7 @@
     (cond
       (number? arg1) (apply + args)
       (string? arg1) (apply str args)
-      ; ???: date representation
+      (instance? java.util.Date arg1) (apply time/add args)
       :else (throw (Exception. (str "Pathlang syntax exception. "
                                     "The + function supports only numbers, strings, and dates."))))))
 
@@ -151,7 +152,7 @@
         arg1 (first args)]
     (cond
       (number? arg1) (apply - args)
-      ; ???: date representation
+      (instance? java.util.Date arg1) (apply time/subtract args)
       :else (throw (Exception. (str "Pathlang syntax exception. "
                                     "The - function supports only numbers and dates."))))))
 
@@ -243,52 +244,63 @@
          args)))
 
 (defmethod pl-eval 'now
-  [[_ & args] context]
-  nil)
+  [_ _]
+  (time/now))
 
 (defmethod pl-eval 'years
-  [[_ & args] context]
-  nil)
+  [[_ n] context]
+  (time/years (pl-eval n context)))
 
 (defmethod pl-eval 'months
-  [[_ & args] context]
-  nil)
+  [[_ n] context]
+  (time/months (pl-eval n context)))
+
+(defmethod pl-eval 'weeks
+  [[_ n] context]
+  (time/weeks (pl-eval n context)))
 
 (defmethod pl-eval 'days
-  [[_ & args] context]
-  nil)
+  [[_ n] context]
+  (time/days (pl-eval n context)))
 
 (defmethod pl-eval 'hours
-  [[_ & args] context]
-  nil)
+  [[_ n] context]
+  (time/hours (pl-eval n context)))
 
 (defmethod pl-eval 'minutes
-  [[_ & args] context]
-  nil)
+  [[_ n] context]
+  (time/minutes (pl-eval n context)))
 
 (defmethod pl-eval 'year-start
-  [[_ & args] context]
-  nil)
+  [[_ d] context]
+  (time/year-start (pl-eval d context)))
 
 (defmethod pl-eval 'month-start
-  [[_ & args] context]
-  nil)
+  [[_ d] context]
+  (time/month-start (pl-eval d context)))
 
 (defmethod pl-eval 'day-start
-  [[_ & args] context]
-  nil)
+  [[_ d] context]
+  (time/day-start (pl-eval d context)))
 
 (defmethod pl-eval 'date
-  [[_ & args] context]
-  nil)
+  [[_ year month day] context]
+  (time/date (pl-eval year context)
+             (pl-eval month context)
+             (pl-eval day context)))
 
 (defmethod pl-eval 'datetime
-  [[_ & args] context]
-  nil)
+  [[_ year month day hour minute] context]
+  (time/datetime (pl-eval year context)
+                 (pl-eval month context)
+                 (pl-eval day context)
+                 (pl-eval hour context)
+                 (pl-eval minute context)))
 
 (defmethod pl-eval 'at-zone
-  [[_ & args] context]
-  nil)
+  [[_ datetime timezone] context]
+  (time/at-zone (pl-eval datetime context)
+                (pl-eval timezone context)))
 
 (defmethod pl-eval :user-fn
   [[fn-name & args] context]
