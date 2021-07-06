@@ -110,6 +110,8 @@
   (is (=       6         (core/evaluate '(+ 1 2 (3)))))
   (is (=       #inst "2010-10-10T08:10:00"
                          (core/evaluate '(+ (date 2010 10 10) (hours 8) (minutes 10)))))
+  (is (thrown? Exception (core/evaluate '(+ (hours 8) (date 2010 10 10)))))  ; ???: should we care about args order?
+  (is (thrown? Exception (core/evaluate '(+ (date 2010 10 10) (date 1 1 1))))) ; ???: is it possible to sum up dates?
   (is (=       "xyz"     (core/evaluate '(+ ("x") "y" ("z")))))
   (is (thrown? Exception (core/evaluate '(+ {:x 1} {:y 2}))))
   (is (thrown? Exception (core/evaluate '(+ 2 "1"))))
@@ -223,8 +225,12 @@
   (is (= #inst "2010-10-10T17:00:00" (core/evaluate '(datetime 2010 10 10 17 00)))))
 
 (deftest at-zone-test
-  ;(is (= #inst "2010-10-10T06:00" (core/evaluate '(at-zone (datetime 2010 10 10 3 0) <Moscow timezone>))))
-  )
+  (is (= #inst "2010-10-10T07:00"
+         (core/evaluate '(at-zone (datetime 2010 10 10 3 0)
+                                  (get-zone "Europe/Moscow")))))
+  (is (= #inst "2015-10-10T06:00"
+         (core/evaluate '(at-zone (datetime 2015 10 10 3 0)
+                                  (get-zone "Europe/Moscow"))))))
 
 (deftest get-zone
   (is (instance? java.time.ZoneId (core/evaluate '(get-zone "UTC")))))

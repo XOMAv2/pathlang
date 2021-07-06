@@ -73,8 +73,9 @@
   [[_ & args] context]
   (apply + (map #(if (seq? %) (count %) 1) args)))
 
-(defn check-and-flatten-args [args & {:keys [ignore-nil]
-                                      :or {ignore-nil false}}]
+(defn check-and-flatten-args [args & {:keys [ignore-nil check-types]
+                                      :or {ignore-nil false
+                                           check-types true}}]
   (let [_ (when (not (help/each-arg-a-val-or-a-single-val-coll? args))
             (throw (Exception. (str "Pathlang syntax exception. "
                                     "Each function argument must be a value or "
@@ -83,7 +84,8 @@
         _ (when (< (count args) 2)
             (throw (Exception. (str "Pathlang syntax exception. "
                                     "Function accepts two or more arguments."))))
-        _ (when (not (help/same-top-level-type? args :ignore-nil ignore-nil))
+        _ (when (and check-types
+                     (not (help/same-top-level-type? args :ignore-nil ignore-nil)))
             (throw (Exception. (str "Pathlang syntax exception. "
                                     "Each atomic value must have the same type."))))]
     args))
@@ -127,8 +129,12 @@
 (defmethod pl-eval '+
   [[_ & args] context]
   (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)
-        arg1 (first args)]
+        args (check-and-flatten-args args :check-types false)
+        arg1 (first args)
+        _ (when (not (or (help/same-top-level-type? args)
+                         (instance? java.util.Date (first args))))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each atomic value must have the same type."))))]
     (cond
       (number? arg1) (apply + args)
       (string? arg1) (apply str args)
@@ -148,8 +154,12 @@
 (defmethod pl-eval '-
   [[_ & args] context]
   (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)
-        arg1 (first args)]
+        args (check-and-flatten-args args :check-types false)
+        arg1 (first args)
+        _ (when (not (or (help/same-top-level-type? args)
+                         (instance? java.util.Date (first args))))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each atomic value must have the same type."))))]
     (cond
       (number? arg1) (apply - args)
       (instance? java.util.Date arg1) (apply time/subtract args)
