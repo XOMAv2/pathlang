@@ -141,10 +141,10 @@ elements.
 ```clojure
 (+ 1 2) => 3
 (+ 1 2 (3)) => 6
+(+ ("x") "y" ("z")) => "xyz"
 (+ (date 2010 10 10) (hours 8) (minutes 10)) => #inst "2010-10-10T08:10:00"
 (+ (hours 8) (date 2010 10 10)) => throws error
 (+ (date 2010 10 10) (date 1 1 1)) => throws error
-(+ ("x") "y" ("z")) => "xyz"
 (+ {:x 1} {:y 2}) => throws error
 (+ 2 "1") => throws error
 (+ 2 nil) => throws error
@@ -361,11 +361,11 @@ Check that car has black color. Search inside :car-state with feature :color
 and extracts value-code from it.
 ```clojure
 (evaluate
- (str (=
-       (:car-state/value-code
-        (filter (= (:feature/code (:car-state/feature %)) :color)
-                (:car/state $)))
-       “black”))
+ (str '(=
+        (:car-state/value-code
+         (filter (= (:feature/code (:car-state/feature %)) :color)
+                 (:car/state $)))
+        “black”))
  {'$ car})
 ```
 
@@ -373,49 +373,49 @@ Searches car-states for feature with id 70 or 90, extracts their long-value,
 sum their values and compare with 1000.
 ```clojure
 (evaluate
- (str (>
-       (sum
-        (:car-state/long-value
-         (filter
-          (or (= (:db/id (:car-state/feature %)) 70)
-              (= (:db/id (:car-state/feature %)) 90))
-          (:car/state $))))
-       1000))
+ (str '(>
+        (sum
+         (:car-state/long-value
+          (filter
+           (or (= (:db/id (:car-state/feature %)) 70)
+               (= (:db/id (:car-state/feature %)) 90))
+           (:car/state $))))
+        1000))
  {'$ car})
 ```
 
 If car has statement for feature :feature-00001 then return it's :car/name
 ```clojure
 (evaluate
- (str (if (filter
-           (= (:feature/code
-               (:car-state/feature %))
-              :feature-00001)
-           (:car/state $))
-        (select-keys (list :car/name) $)
-        ()))
+ (str '(if (filter
+            (= (:feature/code
+                (:car-state/feature %))
+               :feature-00001)
+            (:car/state $))
+         (select-keys (list :car/name) $)
+         ()))
  {'$ car})
 ```
 ```clojure
 (evaluate
- (str (select-keys
-       (list :car/name)
-       (filter
-        (= (:feature/code
-            (:car-state/feature %))
-           :feature-00001)
-        (:car/state $))))
+ (str '(select-keys
+        (list :car/name)
+        (filter
+         (= (:feature/code
+             (:car-state/feature %))
+            :feature-00001)
+         (:car/state $))))
  {'$ car})
 ```
 
 Checkes if cars count plus one for last month more then ten.
 ```clojure
 (evaluate
- (str (>
-       (+
-        (count
-         (ext/list-cars (now) (- (now) (months 1))))
-        1)
-       10))
+ (str '(>
+        (+
+         (count
+          (ext/list-cars (now) (- (now) (months 1))))
+         1)
+        10))
  {'ext/list-cars list-cars})
 ```
