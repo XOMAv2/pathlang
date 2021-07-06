@@ -10,7 +10,7 @@
                'filter 'map 'select-keys
                'now 'years 'months 'weeks 'days 'hours 'minutes
                'year-start 'month-start 'day-start
-               'date 'datetime 'at-zone})
+               'date 'datetime 'at-zone 'get-zone})
 
 (defn get-fn
   [expression context]
@@ -301,6 +301,10 @@
   [[_ datetime timezone] context]
   (time/at-zone (pl-eval datetime context)
                 (pl-eval timezone context)))
+
+(defmethod pl-eval 'get-zone
+  [[_ zone-id] context]
+  (time/get-zone (pl-eval zone-id context)))
 
 (defmethod pl-eval :user-fn
   [[fn-name & args] context]

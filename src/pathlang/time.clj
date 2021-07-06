@@ -46,6 +46,9 @@
       (.toInstant)
       (java.util.Date/from)))
 
+(defn get-zone [zone-id]
+  (java.time.ZoneId/of zone-id))
+
 (defn years
   "Obtains a time-independent Period representing a number of years."
   [n]

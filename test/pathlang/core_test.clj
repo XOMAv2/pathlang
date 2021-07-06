@@ -226,6 +226,9 @@
   ;(is (= #inst "2010-10-10T06:00" (core/evaluate '(at-zone (datetime 2010 10 10 3 0) <Moscow timezone>))))
   )
 
+(deftest get-zone
+  (is (instance? java.time.ZoneId (core/evaluate '(get-zone "UTC")))))
+
 (deftest user-fn-test
   (is (= -4              (core/evaluate '(user/fn1 1 2 3 4)
                                         {'user/fn1 (fn [a b c d] (- (+ a b) (+ c d)))})))
