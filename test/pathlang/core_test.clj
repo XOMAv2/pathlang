@@ -196,18 +196,22 @@
   (is (= #inst "2021-01-01T20:00" (core/evaluate '(now)))))
 
 (deftest years-test
-  ;(is (= <not graphical representation> (core/evaluate '(years 1))))
-  )
+  (is (instance? java.time.Period (core/evaluate '(years 1)))))
 
 (deftest months-test
-  ;(is (= <not graphical representation> (core/evaluate '(months 7))))
-  )
+  (is (instance? java.time.Period (core/evaluate '(months 7)))))
 
-(deftest days-test)
+(deftest weeks-test
+  (is (instance? java.time.Period (core/evaluate '(weeks 10)))))
 
-(deftest hours-test)
+(deftest days-test
+  (is (instance? java.time.Period (core/evaluate '(days 30)))))
 
-(deftest minutes-test)
+(deftest hours-test
+  (is (instance? java.time.Duration (core/evaluate '(hours 42)))))
+
+(deftest minutes-test
+  (is (instance? java.time.Duration (core/evaluate '(minutes 34)))))
 
 (deftest year-start-test
   (is (= #inst "2010-01-01T00:00" (core/evaluate '(year-start (date 2010 10 10))))))
