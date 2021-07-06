@@ -11,14 +11,14 @@
                     (or (= '$ k) (fn? v))))))
 
 ; The expression must be a function.
-#_(s/def ::expression
+(s/def ::expression
   (s/and list?
          (s/every (s/or :pl-value not-coll?
                         :pl-hash-map map?
                         :pl-expression ::expression))))
 
 ; An expression can be a function or a value.
-(s/def ::expression
+#_(s/def ::expression
   (s/or :pl-value not-coll?
         :pl-hash-map map?
         :pl-expression (s/and list?

@@ -10,7 +10,7 @@
                'filter 'map 'select-keys
                'now 'years 'months 'weeks 'days 'hours 'minutes
                'year-start 'month-start 'day-start
-               'date 'datetime 'at-zone 'get-zone})
+               'date 'datetime 'at-zone})
 
 (defn get-fn
   [expression context]
@@ -19,7 +19,7 @@
           (cond (contains? std-fns first-el) first-el
                 (keyword? first-el) :keyword
                 (contains? (dissoc context '$) first-el) :user-fn
-                :else :implicit-list)) ; ???: list or quote?
+                :else :implicit-list))
 
         (map? expression) :hash-map
 
@@ -33,7 +33,7 @@
   (cond (and (symbol? expression) (contains? context expression))
         (get context expression)
         
-        (symbol? expression) ; ???: should unknown characters throw exceptions?
+        (symbol? expression)
         (throw (Exception. (str "Pathlang runtime exception. "
                                 "Unable to resolve symbol: " expression " in this context.")))
         
@@ -49,7 +49,7 @@
 (defmethod pl-eval :keyword
   [[keyword & args] context]
   (let [args (map #(pl-eval % context) args)
-        args (help/flatten-top-level args :keep-empty-lists true)]
+        args (help/flatten-top-level args)]
     (map #(get % keyword) args)))
 
 (defmethod pl-eval 'list
@@ -61,17 +61,19 @@
   (map #(pl-eval % context) expression))
 
 (defmethod pl-eval 'if
-  [[_ test t-branch f-branch & rest] context]
-  (when (seq rest)
+  [[_ test t-branch f-branch :as expression] context]
+  (when (not= 4 (count expression))
     (throw (Exception. (str "Pathlang syntax exception."
-                            "An if expression cannot take more than 3 arguments."))))
+                            "The if function expects exactly 3 arguments."))))
   (if (pl-eval test context)
     (pl-eval t-branch context)
     (pl-eval f-branch context)))
 
 (defmethod pl-eval 'count
   [[_ & args] context]
-  (apply + (map #(if (seq? %) (count %) 1) args)))
+  (->> (map #(pl-eval % context) args)
+       (map #(if (seq? %) (count %) 1))
+       (apply +)))
 
 (defn check-and-flatten-args [args & {:keys [ignore-nil check-types]
                                       :or {ignore-nil false
@@ -171,11 +173,10 @@
   (let [args (map #(pl-eval % context) args)
         args (check-and-flatten-args args)
         arg1 (first args)]
-    (cond
-      (number? arg1) (apply / args)
-      ; ???: date representation and what to do with them?
-      :else (throw (Exception. (str "Pathlang syntax exception. "
-                                    "The / function supports only numbers and dates."))))))
+    (if (number? arg1)
+      (apply / args)
+      (throw (Exception. (str "Pathlang syntax exception. "
+                              "The / function supports only numbers and dates."))))))
 
 (defmethod pl-eval 'sum
   [[_ & args] context]
@@ -211,12 +212,12 @@
     (filter (fn [curr]
               (let [context (assoc context '% curr)
                     pred-result (pl-eval pred context)
-                    #_#__ (when (and (seq? pred-result) (> (count pred-result) 1))
-                            (throw (Exception.
-                                    (str "Pathlang runtime exception. "
-                                         "The filter predicate must return atomic value, "
-                                         "empty collection or collection with one element. "
-                                         "Returned " pred-result " on element " curr "."))))]
+                    _ (when (and (seq? pred-result) (> (count pred-result) 1))
+                        (throw (Exception.
+                                (str "Pathlang runtime exception. "
+                                     "The filter predicate must return atomic value, "
+                                     "empty collection or collection with one element. "
+                                     "Returned " pred-result " on element " curr "."))))]
                 (not (contains? #{false () nil} pred-result))))
             args)))
 
@@ -236,7 +237,7 @@
                        [] args)]
     (apply list result)))
 
-(defmethod pl-eval 'select-keys ; ???: should keys be keywords
+(defmethod pl-eval 'select-keys
   [[_ pred & args :as expression] context]
   (when (< (count expression) 3)
     (throw (Exception. (str "Pathlang syntax exception. "
@@ -312,10 +313,6 @@
   (time/at-zone (pl-eval datetime context)
                 (pl-eval timezone context)))
 
-(defmethod pl-eval 'get-zone
-  [[_ zone-id] context]
-  (time/get-zone (pl-eval zone-id context)))
-
 (defmethod pl-eval :user-fn
   [[fn-name & args] context]
   (let [args (map #(pl-eval % context) args)
@@ -330,27 +327,13 @@
   "Wrapper over the pl-eval function for argument validation."
   ([expression] (evaluate expression {}))
   ([expression context]
-   (when (not (s/valid? ::pls/expression expression))
-     (throw (Exception. (str "Pathlang syntax exception in the evaluation expression.\n"
-                             (help/beautiful-spec-explain ::pls/expression expression)))))
-   (when (not (s/valid? ::pls/context context))
-     (throw (Exception. (str "Pathlang syntax exception in the evaluation context.\n"
-                             (help/beautiful-spec-explain ::pls/context context)))))
-   (pl-eval expression context)))
-
-#_(evaluate 'ext/kek {'$ 42 'ext/kek (fn [a] a)})
-
-#_(defmacro evaluate
-  "Wrapper over the pl-eval function for argument validation."
-  ([expression] `(evaluate ~expression {}))
-  ([expression context]
-   (let [context (help/map-value eval context)]
+   (let [expression (read-string expression)]
      (when (not (s/valid? ::pls/expression expression))
        (throw (Exception. (str "Pathlang syntax exception in the evaluation expression.\n"
                                (help/beautiful-spec-explain ::pls/expression expression)))))
      (when (not (s/valid? ::pls/context context))
        (throw (Exception. (str "Pathlang syntax exception in the evaluation context.\n"
                                (help/beautiful-spec-explain ::pls/context context)))))
-     `(pl-eval '~expression '~context))))
+     (pl-eval expression context))))
 
-#_(evaluate ext/kek {$ 24 ext/kek (fn [a] a)})
+#_(evaluate "(ext/kek $)" {'$ 42 'ext/kek (fn [a] a)})

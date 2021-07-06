@@ -17,11 +17,11 @@
     * % - current element in expressions that are used inside filter, map, etc;
 7. Dynamic context must be passed and it must contain $ (root element), used external functions. It can contain other elements that were used inside expressions.
     ```clojure
-    {$ car
-     z {:x 1 :y 2}
-     ext/list-cars (fn [start end]
+    {'$ car
+     'z {:x 1 :y 2}
+     'ext/list-cars (fn [start end]
                      ...)
-     ext/foo (fn [] 42)}
+     'ext/foo (fn [] 42)}
     ```
 
 ## Functions:
@@ -33,7 +33,9 @@ value, a collection of datomic entities, maps or nil values. Throws error if ato
 value isn't datomic entity or map.
 ```clojure
 (:foo {:foo 1} ({:foo 2} {:bar 1}) ()) => (1 2 nil)
-(:foo {:foo 1} ({:foo 2} {:foo 4}) ()) => (1 2 4 nil)
+(:foo {:foo 1} ({:foo 2} {:foo 4}) ()) => (1 2 4)
+(:foo ()) => ()
+(:foo {:foo 1}) => (1)
 ```
  
 ### `=` - (arg1 arg2 & args)
@@ -140,9 +142,13 @@ elements.
 (+ 1 2) => 3
 (+ 1 2 (3)) => 6
 (+ (date 2010 10 10) (hours 8) (minutes 10)) => #inst "2010-10-10T08:10:00"
+(+ (hours 8) (date 2010 10 10)) => throws error
+(+ (date 2010 10 10) (date 1 1 1)) => throws error
 (+ ("x") "y" ("z")) => "xyz"
 (+ {:x 1} {:y 2}) => throws error
 (+ 2 "1") => throws error
+(+ 2 nil) => throws error
+(+ "x" nil) => throws error
 ```
 
 ### `*` - (arg1 arg2 & args)
@@ -156,6 +162,7 @@ values have different types. Supports numbers. Returns product of all elements.
 (* ("x") "y" ("z")) => throws error
 (* {:x 1} {:y 2}) => throws error
 (* 2 "1") => throws error
+(* 2 nil) => throws error
 ```
 
 ### `-` - (arg1 arg2 & args)
@@ -168,21 +175,25 @@ first element and sum of all successive elements.
 (- 1 2) => -1
 (- 1 2 (3)) => -4
 (- (datetime 2010 10 10 8 10) (hours 8) (minutes 10)) => #inst "2010-10-10T00:00:00"
+(- (hours 8) (date 2010 10 10)) => throws error
+(- (date 2010 10 10) (date 1 1 1)) => throws error
 (- {:x 1} {:y 2}) => throws error
 (- 2 "1") => throws error
+(- 2 nil) => throws error
 ```
 
 ### `/` - (arg1 arg2 & args)
 Accepts two or more arguments which can be an atomic value or a collection of atomic
 values. Throws error if collection contains more than one element or zero elements.
 Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports numbers and dates. Returns quotient between
+values have different types. Supports numbers. Returns quotient between
 first element and product of all successive elements.
 ```clojure
 (/ 4 2) => 2
 (/ 30 2 5) => 3
 (/ {:x 1} {:y 2}) => throws error
 (/ 2 "1") => throws error
+(/ 2 (nil)) => throws error
 ```
 
 ### `sum` - (arg1 arg2 & args)
@@ -196,6 +207,7 @@ sum of all elements of all collection.
 (sum (1 2 3) 1) => 7
 (sum {:x 1} {:y 2}) => throws error
 (sum 2 "1") => throws error
+(sum 2 (2 nil)) => throws error
 ```
 
 ### `product` - (arg1 arg2 & args)
@@ -210,10 +222,11 @@ product of all elements of all collection.
 (product ("x") "y" ("z")) => throws error
 (product {:x 1} {:y 2}) => throws error
 (product 2 "1") => throws error
+(product 2 (2 nil)) => throws error
 ```
 
 ### `list` - (& args)
-Accepts any number of arguments which must be an atomic value. Returns collection consists
+Accepts any number of arguments which must be an atomic value or collection. Returns collection consists
 of passed arguments.
 ```clojure
 (list 1 2) => (1 2)
@@ -224,7 +237,7 @@ of passed arguments.
 
 ### `filter` - (pred arg & args)
 Accepts two or more arguments. First argument must be an expression which works on atomic
-value and returns atomic value or collection with one element. If this expression returns
+value and returns atomic value, empty collection or collection with one element. If this expression returns
 false, empty collection or nil they treat as logical false other values treat as logical
 true. Second and other arguments can be an atomic value or collection of atomic values. Function
 processes each atomic value, passes it into pred expression and if pred returns logical true
@@ -234,6 +247,8 @@ point on currently proccessing element.
 (filter (= % 1) (1 2 3) (4 5 6) 1) => (1 1)
 (filter % (1 2 3) (4 5 6 nil false) 7 ()) => (1 2 3 4 5 6 7)
 (filter (:x %) ({:x 1} {:x 2})) => (1 2)
+(filter (filter (= % 2) %) ((0 1))) => throws error
+(filter % 0 (1 (2 3) 4) 5) => throws error
 ```
 
 ### `map` - (fn args & args)
@@ -244,6 +259,9 @@ to point on currently proccessing element.
 ```clojure
 (map (+ % 1) (1 2 3) 4 (5)) => (2 3 4 5 6)
 (map (:x %) {:x 1}) => (1)
+(map (:x %) (({:x 1} {:y 1}))) => (1 nil)
+(map % 0 () nil) => (0 () nil)
+(map (map (+ 1 %) %) ((1 2 3) (4 5 6))) => throws error
 ```
 
 ### `if` - (test then else)
@@ -258,6 +276,8 @@ will be evaluated otherwise else expression will be evaluated.
 (if (= 1 1)
   (+ 1 2)
   (- 2 1)) => 3
+(if (= 5 5)
+  "success") => throws error
 ```
 
 ### `select-keys` - (fn args & args)
@@ -274,6 +294,9 @@ works with maps and datomic entities.
              ({:x 1 :y 2}
               {:x 2 :y 3}
               {:x 3 :z 4})) => ({:y 2} {} {:z 4})
+(select-keys ("x" 111)
+             ({"x" 1 "y" 2}
+              {"x" 3 111 :a})) => ({"x" 1} {"x" 3 111 :a})
 ```
 
 ### `count` - (args & args)
@@ -283,6 +306,11 @@ of all collection lengths. Atomic value is assumed to be a collection with one e
 (count (1 2 3)) => 3
 (count 1 2 3) => 3
 (count (1) (2 3) 4) => 4
+(count () nil (1 2 3 ())) => 5
+(count nil) => 1
+(count ()) => 0
+(count (nil nil 3)) => 3
+(count (+ 1 2) (:foo {:foo 1} {:bar 2} ())) => 3
 ```
 
 ### `now` - ()
@@ -323,7 +351,7 @@ Accepts five arguments which must be a number. Returns date with particular time
 Accepts two arguments. First argument must be a datetime and second argument must be a timezone.
 Converts datetime to timezone datetime.
 ```clojure
-(at-zone (datetime 2010 10 10 3 0) <Moscow timezone>) => #inst "2010-10-10T06:00"
+(at-zone (datetime 2010 10 10 3 0) "Europe/Moscow") => #inst "2010-10-10T06:00"
 ```
 
 
@@ -333,11 +361,11 @@ Check that car has black color. Search inside :car-state with feature :color
 and extracts value-code from it.
 ```clojure
 (evaluate
- (=
-  (:car-state/value-code
-   (filter (= (:feature/code (:car-state/feature %)) :color)
-           (:car/state $)))
-  “black”)
+ (str (=
+       (:car-state/value-code
+        (filter (= (:feature/code (:car-state/feature %)) :color)
+                (:car/state $)))
+       “black”))
  {'$ car})
 ```
 
@@ -345,49 +373,49 @@ Searches car-states for feature with id 70 or 90, extracts their long-value,
 sum their values and compare with 1000.
 ```clojure
 (evaluate
- (>
-  (sum
-   (:car-state/long-value
-    (filter
-     (or (= (:db/id (:car-state/feature %)) 70)
-         (= (:db/id (:car-state/feature %)) 90))
-     (:car/state $))))
-  1000)
+ (str (>
+       (sum
+        (:car-state/long-value
+         (filter
+          (or (= (:db/id (:car-state/feature %)) 70)
+              (= (:db/id (:car-state/feature %)) 90))
+          (:car/state $))))
+       1000))
  {'$ car})
 ```
 
 If car has statement for feature :feature-00001 then return it's :car/name
 ```clojure
 (evaluate
- (if (filter
-      (= (:feature/code
-          (:car-state/feature %))
-         :feature-00001)
-      (:car/state $))
-   (select-keys (list :car/name) $)
-   ())
+ (str (if (filter
+           (= (:feature/code
+               (:car-state/feature %))
+              :feature-00001)
+           (:car/state $))
+        (select-keys (list :car/name) $)
+        ()))
  {'$ car})
 ```
 ```clojure
 (evaluate
- (select-keys
-  (list :car/name)
-  (filter
-   (= (:feature/code
-       (:car-state/feature %))
-      :feature-00001)
-   (:car/state $)))
+ (str (select-keys
+       (list :car/name)
+       (filter
+        (= (:feature/code
+            (:car-state/feature %))
+           :feature-00001)
+        (:car/state $))))
  {'$ car})
 ```
 
 Checkes if cars count plus one for last month more then ten.
 ```clojure
 (evaluate
- (>
-  (+
-   (count
-    (ext/list-cars (now) (- (now) (months 1))))
-   1)
-  10)
+ (str (>
+       (+
+        (count
+         (ext/list-cars (now) (- (now) (months 1))))
+        1)
+       10))
  {'ext/list-cars list-cars})
 ```

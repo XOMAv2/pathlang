@@ -41,13 +41,10 @@
 
 (defn at-zone [datetime timezone]
   (-> (.toInstant datetime)
-      (java.time.LocalDateTime/ofInstant timezone)
+      (java.time.LocalDateTime/ofInstant (java.time.ZoneId/of timezone))
       (.atZone (java.time.ZoneId/of "UTC"))
       (.toInstant)
       (java.util.Date/from)))
-
-(defn get-zone [zone-id]
-  (java.time.ZoneId/of zone-id))
 
 (defn years
   "Obtains a time-independent Period representing a number of years."
