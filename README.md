@@ -35,7 +35,10 @@ value isn't datomic entity or map.
 (:foo {:foo 1} ({:foo 2} {:bar 1}) ()) => (1 2 nil)
 (:foo {:foo 1} ({:foo 2} {:foo 4}) ()) => (1 2 4)
 (:foo ()) => ()
+(:foo {:foo (1 2 3)} {:foo (4)} {:foo ()}) => (1 2 3 4)
 (:foo {:foo 1}) => (1)
+(:foo nil) => throws error
+(:foo ((1))) => throws error
 ```
  
 ### `=` - (arg1 arg2 & args)
@@ -226,13 +229,15 @@ product of all elements of all collection.
 ```
 
 ### `list` - (& args)
-Accepts any number of arguments which must be an atomic value or collection. Returns collection consists
+Accepts any number of arguments which must be an atomic value or a collection of atomic values. Throws error if collection contains more than one element or zero elements.
+Returns collection consists
 of passed arguments.
 ```clojure
 (list 1 2) => (1 2)
-(list 1 2 (3)) => (1 2 (3))
+(list 1 2 (3)) => (1 2 3)
 (list 1 "2" {:x 1}) => (1 "2" {:x 1})
 (list) => ()
+(list ()) => throws error
 ```
 
 ### `filter` - (pred arg & args)
@@ -246,22 +251,26 @@ point on currently proccessing element.
 ```clojure
 (filter (= % 1) (1 2 3) (4 5 6) 1) => (1 1)
 (filter % (1 2 3) (4 5 6 nil false) 7 ()) => (1 2 3 4 5 6 7)
-(filter (:x %) ({:x 1} {:x 2})) => (1 2)
-(filter (filter (= % 2) %) ((0 1))) => throws error
+(filter (:x %) ({:x 1} {:x 2})) => ({:x 1} {:x 2}) 
+(filter true nil () 1 (2) 3 (4 5)) => (nil 1 2 3 4 5)
+(filter (filter (= % 2) %) (0 1)) => throws error
 (filter % 0 (1 (2 3) 4) 5) => throws error
 ```
 
 ### `map` - (fn args & args)
 Accepts two or more arguments. First argument must be an expression which works on atomic
-value and returns transformed value. Function processes each atomic value, passes it into
+value and returns transformed value.
+Second and other arguments can be an atomic value or collection of atomic values.
+Function processes each atomic value, passes it into
 fn expression and adds it into resulting collection. Inside fn symbol % may be used in order
 to point on currently proccessing element.
+If the result of applying fn to an argument is a collection, it will be merged into the resulting collection like the clojure `into` function.
 ```clojure
 (map (+ % 1) (1 2 3) 4 (5)) => (2 3 4 5 6)
 (map (:x %) {:x 1}) => (1)
 (map (:x %) (({:x 1} {:y 1}))) => (1 nil)
-(map % 0 () nil) => (0 () nil)
-(map (map (+ 1 %) %) ((1 2 3) (4 5 6))) => throws error
+(map % 0 () nil (1) (2 3)) => (0 nil 1 2 3)
+(map (map (+ 1 %) %) (1 2 3) (4 5 6)) => throws error
 ```
 
 ### `if` - (test then else)
@@ -306,10 +315,9 @@ of all collection lengths. Atomic value is assumed to be a collection with one e
 (count (1 2 3)) => 3
 (count 1 2 3) => 3
 (count (1) (2 3) 4) => 4
-(count () nil (1 2 3 ())) => 5
+(count () nil (1 2 3 nil)) => 5
 (count nil) => 1
 (count ()) => 0
-(count (nil nil 3)) => 3
 (count (+ 1 2) (:foo {:foo 1} {:bar 2} ())) => 3
 ```
 

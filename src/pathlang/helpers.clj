@@ -1,13 +1,16 @@
 (ns pathlang.helpers
   (:require [expound.alpha :as ex]))
 
-(defn atomic-value? [x]
+(defn atomic-value?
+  "In terms of pathlang an atomic value is any non-collection or map."
+  [x]
   (or (map? x) (-> x coll? not)))
 
-(defn map-value [f map]
-  (reduce-kv (fn [acc k v]
-               (assoc acc k (f v)))
-             {} map))
+(defn single-value-coll?
+  "Note that map is not a collection in pathlang terminology."
+  [x]
+  (and (-> x atomic-value? not)
+       (= 1 (count x))))
 
 (defn beautiful-spec-explain
   "Just a wrapper over the expound-str function of
@@ -25,8 +28,15 @@
              :else (list %))
           coll))
 
-(defn each-arg-a-val-or-a-single-val-coll? [args]
-  (not (some #(and (-> % atomic-value? not) (not= 1 (count %))) args)))
+(defn every-arg-by-some-pred
+  "Returns true if any of its predicates return a logical true value
+   against all of its arguments, else it returns false.
+   Returns true for empty collections of args.
+   Predicates are applied to the argument until a logical true is obtained
+   (like `or`-composition of preds)."
+  [args & preds]
+  (let [preds (or preds [any?])]
+    (every? (apply some-fn preds) args)))
 
 (defn same-top-level-type? [coll & {:keys [ignore-nil]
                                     :or {ignore-nil false}}]

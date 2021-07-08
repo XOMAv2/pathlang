@@ -3,16 +3,20 @@
             [pathlang.core :as pl :refer [evaluate]]))
 
 (deftest keyword-test
-  (is (= '(1 2 nil) (evaluate (str '(:foo {:foo 1} ({:foo 2} {:bar 1}) ())))))
-  (is (= '(1 2 4)   (evaluate (str '(:foo {:foo 1} ({:foo 2} {:foo 4}) ())))))
-  (is (= '()        (evaluate (str '(:foo ())))))
-  (is (= '(1)       (evaluate (str '(:foo {:foo 1}))))))
+  (is (= '(1 2 nil)      (evaluate (str '(:foo {:foo 1} ({:foo 2} {:bar 1}) ())))))
+  (is (= '(1 2 4)        (evaluate (str '(:foo {:foo 1} ({:foo 2} {:foo 4}) ())))))
+  (is (= '()             (evaluate (str '(:foo ())))))
+  (is (= '(1 2 3 4)      (evaluate (str '(:foo {:foo (1 2 3)} {:foo (4)} {:foo ()})))))
+  (is (= '(1)            (evaluate (str '(:foo {:foo 1})))))
+  (is (thrown? Exception (evaluate (str '(:foo nil)))))
+  (is (thrown? Exception (evaluate (str '(:foo ((1))))))))
 
 (deftest implicit-list-test
   (is (= '(1 2)          (evaluate (str '(1 2)))))
-  (is (= '(1 2 (3))      (evaluate (str '(1 2 (3))))))
+  (is (= '(1 2 3)        (evaluate (str '(1 2 (3))))))
   (is (= '(1 "2" {:x 1}) (evaluate (str '(1 "2" {:x 1})))))
-  (is (= '()             (evaluate (str '())))))
+  (is (= '()             (evaluate (str '()))))
+  (is (thrown? Exception (evaluate (str '(()))))))
 
 (deftest value-test
   (is (thrown? Exception (evaluate (str 5))))
@@ -33,9 +37,10 @@
 
 (deftest list-test
   (is (= '(1 2)          (evaluate (str '(list 1 2)))))
-  (is (= '(1 2 (3) ())   (evaluate (str '(list 1 2 (3) ())))))
+  (is (= '(1 2 3)        (evaluate (str '(list 1 2 (3))))))
   (is (= '(1 "2" {:x 1}) (evaluate (str '(list 1 "2" {:x 1})))))
-  (is (= '()             (evaluate (str '(list))))))
+  (is (= '()             (evaluate (str '(list)))))
+  (is (thrown? Exception (evaluate (str '(list ()))))))
 
 (deftest if-test
   (is (= 1               (evaluate (str '(if (= 1 2)
@@ -51,10 +56,9 @@
   (is (= 3 (evaluate (str '(count (1 2 3))))))
   (is (= 3 (evaluate (str '(count 1 2 3)))))
   (is (= 4 (evaluate (str '(count (1) (2 3) 4)))))
-  (is (= 5 (evaluate (str '(count () nil (1 2 3 ()))))))
+  (is (= 5 (evaluate (str '(count () nil (1 2 3 nil))))))
   (is (= 1 (evaluate (str '(count nil)))))
   (is (= 0 (evaluate (str '(count ())))))
-  (is (= 3 (evaluate (str '(count (nil nil 3))))))
   (is (= 3 (evaluate (str '(count (+ 1 2) (:foo {:foo 1} {:bar 2} ())))))))
 
 (deftest =-test
@@ -73,6 +77,7 @@
   (is (=       true      (evaluate (str '(not= "red" nil)))))
   (is (thrown? Exception (evaluate (str '(not= "red" ("red" "green"))))))
   (is (thrown? Exception (evaluate (str '(not= "red" (1) {:x 1})))))
+  (is (thrown? Exception (evaluate (str '(not= "red" ((1)))))))
   (is (thrown? Exception (evaluate (str '(not= "red" ((1)))))))
   (is (thrown? Exception (evaluate (str '(not= "red")))))
   (is (thrown? Exception (evaluate (str '(not= "red" ()))))))
@@ -173,15 +178,16 @@
   (is (= '(1 1)           (evaluate (str '(filter (= % 1) (1 2 3) (4 5 6) 1)))))
   (is (= '(1 2 3 4 5 6 7) (evaluate (str '(filter % (1 2 3) (4 5 6 nil false) 7 ())))))
   (is (= '({:x 1} {:x 2}) (evaluate (str '(filter (:x %) ({:x 1} {:x 2}))))))
-  (is (thrown? Exception  (evaluate (str '(filter (filter (= % 2) %) ((0 1)))))))
+  (is (= '(nil 1 2 3 4 5) (evaluate (str '(filter true nil () 1 (2) 3 (4 5))))))
+  (is (thrown? Exception  (evaluate (str '(filter (filter (= % 2) %) (0 1))))))
   (is (thrown? Exception  (evaluate (str '(filter % 0 (1 (2 3) 4) 5))))))
 
 (deftest map-test
   (is (= '(2 3 4 5 6)    (evaluate (str '(map (+ % 1) (1 2 3) 4 (5))))))
   (is (= '(1)            (evaluate (str '(map (:x %) {:x 1})))))
-  (is (= '(1 nil)        (evaluate (str '(map (:x %) (({:x 1} {:y 1}))))))) ; ???: If mapped value is non-empty collection it will be flatten.
-  (is (= '(0 () nil)     (evaluate (str '(map % 0 () nil))))) ; ???: If mapped value is empty collection it will be remained.
-  (is (thrown? Exception (evaluate (str '(map (map (+ 1 %) %) ((1 2 3) (4 5 6))))))))
+  (is (= '(1 nil)        (evaluate (str '(map (:x %) (({:x 1} {:y 1})))))))
+  (is (= '(0 nil 1 2 3)  (evaluate (str '(map % 0 () nil (1) (2 3))))))
+  (is (thrown? Exception (evaluate (str '(map (map (+ 1 %) %) (1 2 3) (4 5 6)))))))
 
 (deftest select-keys-test
   (is (= '({:x 1} {:y 1} {:x 3 :y 4})

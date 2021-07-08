@@ -50,16 +50,39 @@
 (defmethod pl-eval :keyword
   [[keyword & args] context]
   (let [args (map #(pl-eval % context) args)
-        args (help/flatten-top-level args)]
-    (map #(get % keyword) args)))
+        _ (when (not (help/each-arg-valid? args
+                                           map?
+                                           #(and (coll? %) (every? map? %))))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each function argument must be a map or "
+                                    "collection of maps."))))
+        args (help/flatten-top-level args)
+        args (map #(get % keyword) args)]
+    (help/flatten-top-level args)))
 
 (defmethod pl-eval 'list
   [[_ & args] context]
-  (map #(pl-eval % context) args))
+  (let [args (map #(pl-eval % context) args)
+        _ (when (not (help/every-arg-by-some-pred args
+                                                  atomic-value?
+                                                  #(and (help/single-value-coll? %)
+                                                        (every? atomic-value? %))))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each function argument must be an atomic value or "
+                                    "a collection of a single atomic value."))))]
+    (help/flatten-top-level args)))
 
 (defmethod pl-eval :implicit-list
-  [expression context]
-  (map #(pl-eval % context) expression))
+  [args context]
+  (let [args (map #(pl-eval % context) args)
+        _ (when (not (help/every-arg-by-some-pred args
+                                                  atomic-value?
+                                                  #(and (help/single-value-coll? %)
+                                                        (every? atomic-value? %))))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Each function argument must be an atomic value or "
+                                    "a collection of a single atomic value."))))]
+    (help/flatten-top-level args)))
 
 (defmethod pl-eval 'if
   [[_ test t-branch f-branch :as expression] context]
@@ -79,10 +102,13 @@
 (defn check-and-flatten-args [args & {:keys [ignore-nil check-types]
                                       :or {ignore-nil false
                                            check-types true}}]
-  (let [_ (when (not (help/each-arg-a-val-or-a-single-val-coll? args))
+  (let [_ (when (not (help/every-arg-by-some-pred args
+                                                  atomic-value?
+                                                  #(and (help/single-value-coll? %)
+                                                        (every? atomic-value? %))))
             (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each function argument must be a value or "
-                                    "a collection of a single value."))))
+                                    "Each function argument must be an atomic value or "
+                                    "a collection of a single atomic value."))))
         args (help/flatten-top-level args)
         _ (when (< (count args) 2)
             (throw (Exception. (str "Pathlang syntax exception. "
@@ -209,18 +235,26 @@
     (throw (Exception. (str "Pathlang syntax exception. "
                             "The filter function expects two or more arguments."))))
   (let [args (map #(pl-eval % context) args)
-        args (help/flatten-top-level args :keep-empty-lists true)]
-    (filter (fn [curr]
-              (let [context (assoc context '% curr)
-                    pred-result (pl-eval pred context)
-                    _ (when (and (-> pred-result atomic-value? not) (> (count pred-result) 1))
-                        (throw (Exception.
-                                (str "Pathlang runtime exception. "
-                                     "The filter predicate must return atomic value, "
-                                     "empty collection or collection with one element. "
-                                     "Returned " pred-result " on element " curr "."))))]
-                (not (contains? #{false () nil} pred-result))))
-            args)))
+        _ (when (not (help/every-arg-by-some-pred args
+                                                  atomic-value?
+                                                  (partial every? atomic-value?)))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Second and other function argument must be an atomic value or "
+                                    "a collection of atomic values."))))
+        args (help/flatten-top-level args)
+        args (filter (fn [curr]
+                       (let [context (assoc context '% curr)
+                             pred-result (pl-eval pred context)
+                             _ (when (and (-> pred-result atomic-value? not)
+                                          (> (count pred-result) 1))
+                                 (throw (Exception.
+                                         (str "Pathlang runtime exception. "
+                                              "The filter predicate must return atomic value, "
+                                              "empty collection or collection with one element. "
+                                              "Returned " pred-result " on element " curr "."))))]
+                         (not (contains? #{false () nil} pred-result))))
+                     args)]
+    (help/flatten-top-level args)))
 
 (defmethod pl-eval 'map
   [[_ pred & args :as expression] context]
@@ -228,11 +262,17 @@
     (throw (Exception. (str "Pathlang syntax exception. "
                             "The map function expects two or more arguments."))))
   (let [args (map #(pl-eval % context) args)
+        _ (when (not (help/every-arg-by-some-pred args
+                                                  atomic-value?
+                                                  (partial every? atomic-value?)))
+            (throw (Exception. (str "Pathlang syntax exception. "
+                                    "Second and other function argument must be an atomic value or "
+                                    "a collection of atomic values."))))
         args (help/flatten-top-level args :keep-empty-lists true)
         result (reduce (fn [acc curr]
                          (let [context (assoc context '% curr)
                                pred-result (pl-eval pred context)]
-                           (if (and (-> pred-result atomic-value? not) (seq pred-result))
+                           (if (-> pred-result atomic-value? not)
                              (into acc pred-result)
                              (conj acc pred-result))))
                        [] args)]
@@ -244,7 +284,7 @@
     (throw (Exception. (str "Pathlang syntax exception. "
                             "The select-keys function expects two or more arguments."))))
   (let [args (map #(pl-eval % context) args)
-        args (help/flatten-top-level args :keep-empty-lists true)
+        args (help/flatten-top-level args)
         _ (when (or (not (help/same-top-level-type? args))
                     (not= (type {}) (type (first args)))) ; ???: hash-map or datomic entity
             (throw (Exception. "Pathlang syntax exception. "
