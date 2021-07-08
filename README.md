@@ -365,7 +365,7 @@ and extracts value-code from it.
         (:car-state/value-code
          (filter (= (:feature/code (:car-state/feature %)) :color)
                  (:car/state $)))
-        “black”))
+        "black"))
  {'$ car})
 ```
 
