@@ -1,6 +1,6 @@
 (ns pathlang.core
   (:require [clojure.spec.alpha :as s]
-            [pathlang.helpers :as help]
+            [pathlang.helpers :as help :refer [atomic-value?]]
             [pathlang.time :as time]
             [pathlang.spec :as pls]))
 
@@ -14,14 +14,15 @@
 
 (defn get-fn
   [expression context]
-  (cond (seq? expression)
+  (cond (map? expression)
+        :hash-map
+        
+        (coll? expression)
         (let [first-el (first expression)]
           (cond (contains? std-fns first-el) first-el
                 (keyword? first-el) :keyword
                 (contains? (dissoc context '$) first-el) :user-fn
                 :else :implicit-list))
-
-        (map? expression) :hash-map
 
         :else :value))
 
@@ -72,7 +73,7 @@
 (defmethod pl-eval 'count
   [[_ & args] context]
   (->> (map #(pl-eval % context) args)
-       (map #(if (seq? %) (count %) 1))
+       (map #(if (-> % atomic-value? not) (count %) 1))
        (apply +)))
 
 (defn check-and-flatten-args [args & {:keys [ignore-nil check-types]
@@ -212,7 +213,7 @@
     (filter (fn [curr]
               (let [context (assoc context '% curr)
                     pred-result (pl-eval pred context)
-                    _ (when (and (seq? pred-result) (> (count pred-result) 1))
+                    _ (when (and (-> pred-result atomic-value? not) (> (count pred-result) 1))
                         (throw (Exception.
                                 (str "Pathlang runtime exception. "
                                      "The filter predicate must return atomic value, "
@@ -231,7 +232,7 @@
         result (reduce (fn [acc curr]
                          (let [context (assoc context '% curr)
                                pred-result (pl-eval pred context)]
-                           (if (and (seq? pred-result) (seq pred-result))
+                           (if (and (-> pred-result atomic-value? not) (seq pred-result))
                              (into acc pred-result)
                              (conj acc pred-result))))
                        [] args)]
@@ -334,6 +335,9 @@
      (when (not (s/valid? ::pls/context context))
        (throw (Exception. (str "Pathlang syntax exception in the evaluation context.\n"
                                (help/beautiful-spec-explain ::pls/context context)))))
-     (pl-eval expression context))))
+     (let [result (pl-eval expression context)]
+       (if (seq? result)
+         (doall result)
+         result)))))
 
 #_(evaluate "(ext/kek $)" {'$ 42 'ext/kek (fn [a] a)})

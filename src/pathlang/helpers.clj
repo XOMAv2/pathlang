@@ -1,10 +1,8 @@
 (ns pathlang.helpers
   (:require [expound.alpha :as ex]))
 
-(defn not-coll?
-  "Returns true if x does not implements IPersistentCollection."
-  [x]
-  (not (coll? x)))
+(defn atomic-value? [x]
+  (or (map? x) (-> x coll? not)))
 
 (defn map-value [f map]
   (reduce-kv (fn [acc k v]
@@ -28,7 +26,7 @@
           coll))
 
 (defn each-arg-a-val-or-a-single-val-coll? [args]
-  (not (some #(and (seq? %) (not= 1 (count %))) args)))
+  (not (some #(and (-> % atomic-value? not) (not= 1 (count %))) args)))
 
 (defn same-top-level-type? [coll & {:keys [ignore-nil]
                                     :or {ignore-nil false}}]

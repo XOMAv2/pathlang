@@ -1,6 +1,6 @@
 (ns pathlang.core-test
-  (:require [clojure.test :refer [deftest testing is]]
-            [pathlang.core :refer [evaluate]]))
+  (:require [clojure.test :as test :refer [deftest testing is]]
+            [pathlang.core :as pl :refer [evaluate]]))
 
 (deftest keyword-test
   (is (= '(1 2 nil) (evaluate (str '(:foo {:foo 1} ({:foo 2} {:bar 1}) ())))))
@@ -17,19 +17,19 @@
 (deftest value-test
   (is (thrown? Exception (evaluate (str 5))))
   (is (thrown? Exception (evaluate (str nil))))
-  (is (= '5              (#'pathlang.core/pl-eval '5 {})))
-  (is (= 'true           (#'pathlang.core/pl-eval 'true {})))
-  (is (= 'nil            (#'pathlang.core/pl-eval 'nil {})))
-  (is (= '\newline       (#'pathlang.core/pl-eval '\newline {})))
-  (is (= '"some str"     (#'pathlang.core/pl-eval '"some str" {})))
-  (is (= '()             (#'pathlang.core/pl-eval '() {})))
-  (is (= ':keyword       (#'pathlang.core/pl-eval ':keyword {})))
-  (is (thrown? Exception (#'pathlang.core/pl-eval ''q-symbol {})))
-  (is (thrown? Exception (#'pathlang.core/pl-eval 'unq-symbol {})))
-  (is (= 42              (#'pathlang.core/pl-eval '$ {'$ 42}))))
+  (is (= 5               (#'pl/pl-eval 5 {})))
+  (is (= true            (#'pl/pl-eval true {})))
+  (is (= nil             (#'pl/pl-eval nil {})))
+  (is (= \newline        (#'pl/pl-eval \newline {})))
+  (is (= "some str"      (#'pl/pl-eval "some str" {})))
+  (is (= ()              (#'pl/pl-eval () {})))
+  (is (= :keyword        (#'pl/pl-eval :keyword {})))
+  (is (thrown? Exception (doall (#'pl/pl-eval ''q-symbol {}))))
+  (is (thrown? Exception (#'pl/pl-eval 'unq-symbol {})))
+  (is (= 42              (#'pl/pl-eval '$ {'$ 42}))))
 
 (deftest hash-map-test
-  (is (= {"xy" 3} (#'pathlang.core/pl-eval '{(+ "x" "y") (+ 1 $)} {'$ 2}))))
+  (is (= {"xy" 3} (#'pl/pl-eval '{(+ "x" "y") (+ 1 $)} {'$ 2}))))
 
 (deftest list-test
   (is (= '(1 2)          (evaluate (str '(list 1 2)))))
