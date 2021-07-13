@@ -43,12 +43,13 @@
   (is (thrown? Exception (evaluate (str '(list ()))))))
 
 (deftest if-test
-  (is (= 1               (evaluate (str '(if (= 1 2)
+  (is (= 1               (evaluate (str '(if ()
                                            (+ 1 2)
                                            (- 2 1))))))
   (is (= 3               (evaluate (str '(if (= 1 1)
                                            (+ 1 2)
                                            (- 2 1))))))
+  (is (= :b              (evaluate (str '(if nil :a :b)))))
   (is (thrown? Exception (evaluate (str '(if (= 5 5)
                                            "success"))))))
 
@@ -65,6 +66,7 @@
   (is (=       false     (evaluate (str '(= "red" ("green") "blue")))))
   (is (=       true      (evaluate (str '(= "red" ("red") "red")))))
   (is (=       false     (evaluate (str '(= "red" nil)))))
+  (is (thrown? Exception (evaluate (str '(= 2.0 2)))))
   (is (thrown? Exception (evaluate (str '(= "red" ("red" "green"))))))
   (is (thrown? Exception (evaluate (str '(= "red" (1) {:x 1})))))
   (is (thrown? Exception (evaluate (str '(= "red" ((1)))))))
@@ -87,6 +89,7 @@
   (is (=       true      (evaluate (str '(> 2 1 -1)))))
   (is (=       true      (evaluate (str '(> 2 (1) (-1))))))
   (is (thrown? Exception (evaluate (str '(> 2 (1 2))))))
+  (is (thrown? Exception (evaluate (str '(> 1 2.0)))))
   (is (thrown? Exception (evaluate (str '(> 2 "1"))))))
 
 (deftest <-test
@@ -94,6 +97,7 @@
   (is (=       true      (evaluate (str '(< 1 2 (3))))))
   (is (=       false     (evaluate (str '(< 2 1 -1)))))
   (is (=       false     (evaluate (str '(< 2 (1) (-1))))))
+  (is (thrown? Exception (evaluate (str '(< 1 2.1)))))
   (is (thrown? Exception (evaluate (str '(< 2 (1 2))))))
   (is (thrown? Exception (evaluate (str '(< 2 "1"))))))
 
@@ -103,6 +107,7 @@
   (is (=       true      (evaluate (str '(>= 2 2 -1)))))
   (is (=       true      (evaluate (str '(>= 2 2 2)))))
   (is (=       true      (evaluate (str '(>= 2 (1) (-1))))))
+  (is (thrown? Exception (evaluate (str '(>= 1 2.1)))))
   (is (thrown? Exception (evaluate (str '(>= 2 (1 2))))))
   (is (thrown? Exception (evaluate (str '(>= 2 "1"))))))
 
@@ -113,6 +118,7 @@
   (is (=       true      (evaluate (str '(<= 2 2 (2))))))
   (is (=       false     (evaluate (str '(<= 2 1 -1)))))
   (is (=       false     (evaluate (str '(<= 2 (1) (-1))))))
+  (is (thrown? Exception (evaluate (str '(<= 1 2.1)))))
   (is (thrown? Exception (evaluate (str '(<= 2 (1 2))))))
   (is (thrown? Exception (evaluate (str '(<= 2 "1"))))))
 
@@ -126,6 +132,7 @@
   (is (=       "xyz"     (evaluate (str '(+ ("x") "y" ("z"))))))
   (is (thrown? Exception (evaluate (str '(+ {:x 1} {:y 2})))))
   (is (thrown? Exception (evaluate (str '(+ 2 "1")))))
+  (is (thrown? Exception (evaluate (str '(+ 1 2.1)))))
   (is (thrown? Exception (evaluate (str '(+ 2 nil)))))
   (is (thrown? Exception (evaluate (str '(+ "x" nil))))))
 
@@ -135,6 +142,7 @@
   (is (thrown? Exception (evaluate (str '(* ("x") "y" ("z"))))))
   (is (thrown? Exception (evaluate (str '(* {:x 1} {:y 2})))))
   (is (thrown? Exception (evaluate (str '(* 2 "1")))))
+  (is (thrown? Exception (evaluate (str '(* 1 2.1)))))
   (is (thrown? Exception (evaluate (str '(* 2 nil)))))) 
 
 (deftest subtraction-test ; -
@@ -146,6 +154,7 @@
   (is (thrown? Exception (evaluate (str '(- (date 2010 10 10) (date 1 1 1))))))
   (is (thrown? Exception (evaluate (str '(- {:x 1} {:y 2})))))
   (is (thrown? Exception (evaluate (str '(- 2 "1")))))
+  (is (thrown? Exception (evaluate (str '(- 1 2.1)))))
   (is (thrown? Exception (evaluate (str '(- 2 nil))))))
 
 (deftest division-test ; /
@@ -153,6 +162,7 @@
   (is (=       3         (evaluate (str '(/ 30 2 5)))))
   (is (thrown? Exception (evaluate (str '(/ {:x 1} {:y 2})))))
   (is (thrown? Exception (evaluate (str '(/ 2 "1")))))
+  (is (thrown? Exception (evaluate (str '(/ 4 2.0)))))
   (is (thrown? Exception (evaluate (str '(/ 2 (nil)))))))
 
 (deftest sum-test
@@ -162,6 +172,7 @@
   (is (=       7         (evaluate (str '(sum (1 2 3) 1)))))
   (is (thrown? Exception (evaluate (str '(sum {:x 1} {:y 2})))))
   (is (thrown? Exception (evaluate (str '(sum 2 "1")))))
+  (is (thrown? Exception (evaluate (str '(sum 1 2.0)))))
   (is (thrown? Exception (evaluate (str '(sum 2 (2 nil)))))))
 
 (deftest product-test
@@ -172,6 +183,7 @@
   (is (thrown? Exception (evaluate (str '(product ("x") "y" ("z"))))))
   (is (thrown? Exception (evaluate (str '(product {:x 1} {:y 2})))))
   (is (thrown? Exception (evaluate (str '(product 2 "1")))))
+  (is (thrown? Exception (evaluate (str '(product 1 2.0)))))
   (is (thrown? Exception (evaluate (str '(product 2 (2 nil)))))))
 
 (deftest filter-test
@@ -205,7 +217,8 @@
                                        {"x" 3 111 :a})))))))
 
 (deftest now-test
-  #_(is (= #inst "2021-01-01T20:00" (evaluate (str '(now))))))
+  #_(is (= #inst "2021-01-01T20:00" (evaluate (str '(now)))))
+  (is (instance? java.util.Date (evaluate (str '(now))))))
 
 (deftest years-test
   (is (instance? java.time.Period (evaluate (str '(years 1))))))
@@ -258,4 +271,40 @@
   (is (thrown? Exception (evaluate (str '(user/fn5))))))
 
 (deftest evaluate-test
-  (is (thrown? Exception (evaluate (str '(a b))))))
+  (is (thrown? Exception (evaluate (str '(a b)))))
+
+  (let [car {:car/name "Bus"
+             :car/state [{:id 1
+                          :car-state/feature {:db/id 70
+                                              :feature/code :color
+                                              :feature/name "Color"}
+                          :car-state/value-code "black"
+                          :car-state/long-value 10.7}
+                         {:id 2
+                          :car-state/feature {:db/id 80
+                                              :feature/code :length
+                                              :feature/name "Length"}
+                          :car-state/long-value 10.7}
+                         {:id 3
+                          :car-state/feature {:db/id 90
+                                              :feature/code :height
+                                              :feature/name "Height"}
+                          :car-state/long-value 10.7}]}]
+    (testing "Complex example #1."
+      (is (= (apply list (:car/state car))
+             (evaluate (str '(:car/state $)) {'$ car})))
+      (is (= '({:id 1
+                :car-state/feature {:db/id 70
+                                    :feature/code :color
+                                    :feature/name "Color"}
+                :car-state/value-code "black"
+                :car-state/long-value 10.7})
+             (evaluate (str '(filter (= (:feature/code (:car-state/feature %)) :color)
+                                     (:car/state $)))
+                       {'$ car})))
+      (is (= true
+             (evaluate (str '(= (:car-state/value-code
+                                 (filter (= (:feature/code (:car-state/feature %)) :color)
+                                         (:car/state $)))
+                                "black"))
+                       {'$ car}))))))

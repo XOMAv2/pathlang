@@ -50,6 +50,7 @@ values have different types. Returns true if all atomic values of arguments are 
 (= "red" ("green") "blue") => false
 (= "red" ("red") "red") => true
 (= "red" nil) => false
+(= 2.0 2) => throws error
 (= "red" ("red" "green")) => throws error
 (= "red" (1) {:x 1}) => throws error
 (= "red" ((1))) => throws error
@@ -84,6 +85,7 @@ if each successive element strictly more than previous otherwise returns false.
 (> 2 1 -1) => true
 (> 2 (1) (-1)) => true
 (> 2 (1 2)) => throws error
+(> 1 2.0) => throws error
 (> 2 "1") => throws error
 ```
 
@@ -98,6 +100,7 @@ if each successive element strictly less than previous otherwise returns false.
 (< 1 2 (3)) => true
 (< 2 1 -1) => false
 (< 2 (1) (-1)) => false
+(< 1 2.1) => throws error
 (< 2 (1 2)) => throws error
 (< 2 "1") => throws error
 ```
@@ -114,6 +117,7 @@ if each successive element more or equal than previous otherwise returns false.
 (>= 2 2 -1) => true
 (>= 2 2 2) => true
 (>= 2 (1) (-1)) => true
+(>= 1 2.1) => throws error
 (>= 2 (1 2)) => throws error
 (>= 2 "1") => throws error
 ```
@@ -131,6 +135,7 @@ if each successive element less or equal than previous otherwise returns false.
 (<= 2 2 (2)) => true
 (<= 2 1 -1) => false
 (<= 2 (1) (-1)) => false
+(<= 1 2.1) => throws error
 (<= 2 (1 2)) => throws error
 (<= 2 "1") => throws error
 ```
@@ -150,6 +155,7 @@ elements.
 (+ (date 2010 10 10) (date 1 1 1)) => throws error
 (+ {:x 1} {:y 2}) => throws error
 (+ 2 "1") => throws error
+(+ 1 2.1) => throws error
 (+ 2 nil) => throws error
 (+ "x" nil) => throws error
 ```
@@ -165,6 +171,7 @@ values have different types. Supports numbers. Returns product of all elements.
 (* ("x") "y" ("z")) => throws error
 (* {:x 1} {:y 2}) => throws error
 (* 2 "1") => throws error
+(* 1 2.1) => throws error
 (* 2 nil) => throws error
 ```
 
@@ -182,6 +189,7 @@ first element and sum of all successive elements.
 (- (date 2010 10 10) (date 1 1 1)) => throws error
 (- {:x 1} {:y 2}) => throws error
 (- 2 "1") => throws error
+(- 1 2.1) => throws error
 (- 2 nil) => throws error
 ```
 
@@ -196,6 +204,7 @@ first element and product of all successive elements.
 (/ 30 2 5) => 3
 (/ {:x 1} {:y 2}) => throws error
 (/ 2 "1") => throws error
+(/ 4 2.0) => throws error
 (/ 2 (nil)) => throws error
 ```
 
@@ -210,6 +219,7 @@ sum of all elements of all collection.
 (sum (1 2 3) 1) => 7
 (sum {:x 1} {:y 2}) => throws error
 (sum 2 "1") => throws error
+(sum 1 2.0) => throws error
 (sum 2 (2 nil)) => throws error
 ```
 
@@ -225,6 +235,7 @@ product of all elements of all collection.
 (product ("x") "y" ("z")) => throws error
 (product {:x 1} {:y 2}) => throws error
 (product 2 "1") => throws error
+(product 1 2.0) => throws error
 (product 2 (2 nil)) => throws error
 ```
 
@@ -279,12 +290,13 @@ false (empty collection or nil are treated as logical false other values are tre
 Arguments then and else can be any valid expression. If test returns logical true then then expression
 will be evaluated otherwise else expression will be evaluated.
 ```clojure
-(if (= 1 2)
+(if ()
   (+ 1 2)
   (- 2 1)) => 1
 (if (= 1 1)
   (+ 1 2)
   (- 2 1)) => 3
+(if nil :a :b) => :b
 (if (= 5 5)
   "success") => throws error
 ```
@@ -388,7 +400,7 @@ sum their values and compare with 1000.
            (or (= (:db/id (:car-state/feature %)) 70)
                (= (:db/id (:car-state/feature %)) 90))
            (:car/state $))))
-        1000))
+        1000.0))
  {'$ car})
 ```
 

@@ -12,6 +12,13 @@
   (and (-> x atomic-value? not)
        (= 1 (count x))))
 
+(defn atomic-single-value-coll?
+  "Note that map is not a collection in pathlang terminology."
+  [x]
+  (and (-> x atomic-value? not)
+       (= 1 (count x))
+       (-> x first atomic-value?)))
+
 (defn beautiful-spec-explain
   "Just a wrapper over the expound-str function of
    the expound library with several keys."

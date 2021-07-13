@@ -12,11 +12,19 @@
                'year-start 'month-start 'day-start
                'date 'datetime 'at-zone})
 
+(def logical-false #{false () #{} nil})
+
+(defn logical-false? [x]
+  (contains? logical-false x))
+
+(defn logical-true? [x]
+  (not (contains? logical-false x)))
+
 (defn get-fn
   [expression context]
   (cond (map? expression)
         :hash-map
-        
+
         (coll? expression)
         (let [first-el (first expression)]
           (cond (contains? std-fns first-el) first-el
@@ -33,7 +41,7 @@
   [expression context]
   (cond (and (symbol? expression) (contains? context expression))
         (get context expression)
-        
+
         (symbol? expression)
         (throw (Exception. (str "Pathlang runtime exception. "
                                 "Unable to resolve symbol: " expression " in this context.")))
@@ -65,8 +73,7 @@
   (let [args (map #(pl-eval % context) args)
         _ (when (not (help/every-arg-by-some-pred args
                                                   atomic-value?
-                                                  #(and (help/single-value-coll? %)
-                                                        (every? atomic-value? %))))
+                                                  help/atomic-single-value-coll?))
             (throw (Exception. (str "Pathlang syntax exception. "
                                     "Each function argument must be an atomic value or "
                                     "a collection of a single atomic value."))))]
@@ -77,8 +84,7 @@
   (let [args (map #(pl-eval % context) args)
         _ (when (not (help/every-arg-by-some-pred args
                                                   atomic-value?
-                                                  #(and (help/single-value-coll? %)
-                                                        (every? atomic-value? %))))
+                                                  help/atomic-single-value-coll?))
             (throw (Exception. (str "Pathlang syntax exception. "
                                     "Each function argument must be an atomic value or "
                                     "a collection of a single atomic value."))))]
@@ -89,7 +95,7 @@
   (when (not= 4 (count expression))
     (throw (Exception. (str "Pathlang syntax exception."
                             "The if function expects exactly 3 arguments."))))
-  (if (pl-eval test context)
+  (if (logical-true? (pl-eval test context))
     (pl-eval t-branch context)
     (pl-eval f-branch context)))
 
@@ -104,8 +110,7 @@
                                            check-types true}}]
   (let [_ (when (not (help/every-arg-by-some-pred args
                                                   atomic-value?
-                                                  #(and (help/single-value-coll? %)
-                                                        (every? atomic-value? %))))
+                                                  help/atomic-single-value-coll?))
             (throw (Exception. (str "Pathlang syntax exception. "
                                     "Each function argument must be an atomic value or "
                                     "a collection of a single atomic value."))))
@@ -245,14 +250,15 @@
         args (filter (fn [curr]
                        (let [context (assoc context '% curr)
                              pred-result (pl-eval pred context)
-                             _ (when (and (-> pred-result atomic-value? not)
-                                          (> (count pred-result) 1))
+                             _ (when (not (or (atomic-value? pred-result)
+                                              (empty? pred-result)
+                                              (help/atomic-single-value-coll? pred-result)))
                                  (throw (Exception.
                                          (str "Pathlang runtime exception. "
                                               "The filter predicate must return atomic value, "
                                               "empty collection or collection with one element. "
                                               "Returned " pred-result " on element " curr "."))))]
-                         (not (contains? #{false () nil} pred-result))))
+                         (logical-true? pred-result)))
                      args)]
     (help/flatten-top-level args)))
 
