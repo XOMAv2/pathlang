@@ -15,10 +15,17 @@
 (def logical-false #{false () #{} nil})
 
 (defn logical-false? [x]
+  (when (not (or (atomic-value? x)
+                 (empty? x)
+                 (help/atomic-single-value-coll? x)))
+    (throw (Exception. (str "Pathlang runtime exception. "
+                            "Implicit conversion to logical true or false is "
+                            "available only for atomic values, empty "
+                            "collections and single atomic value collections."))))
   (contains? logical-false x))
 
 (defn logical-true? [x]
-  (not (contains? logical-false x)))
+  (not (logical-false? x)))
 
 (defn get-fn
   [expression context]
@@ -142,15 +149,7 @@
     (throw (Exception. (str "Pathlang syntax exception. "
                             "Function accepts two or more arguments."))))
   (-> (some (fn [el]
-              (let [eval-result (pl-eval el context)]
-                (when (not (or (atomic-value? eval-result)
-                               (empty? eval-result)
-                               (help/atomic-single-value-coll? eval-result)))
-                  (throw (Exception. (str "Pathlang runtime exception. "
-                                          "Evaluated argument must be an atomic value, "
-                                          "empty collection or collection with one element. "
-                                          "Returned " eval-result " on element " el "."))))
-                (logical-true? eval-result)))
+              (logical-true? (pl-eval el context)))
             args)
       (or false)))
 
@@ -160,15 +159,7 @@
     (throw (Exception. (str "Pathlang syntax exception. "
                             "Function accepts two or more arguments."))))
   (-> (some (fn [el]
-              (let [eval-result (pl-eval el context)]
-                (when (not (or (atomic-value? eval-result)
-                               (empty? eval-result)
-                               (help/atomic-single-value-coll? eval-result)))
-                  (throw (Exception. (str "Pathlang runtime exception. "
-                                          "Evaluated argument must be an atomic value, "
-                                          "empty collection or collection with one element. "
-                                          "Returned " eval-result " on element " el "."))))
-                (logical-false? eval-result)))
+              (logical-false? (pl-eval el context)))
             args)
       (not)))
 
@@ -177,15 +168,7 @@
   (when (not= 2 (count expression))
     (throw (Exception. (str "Pathlang syntax exception. "
                             "Function accepts only one argument."))))
-  (let [eval-result (pl-eval el context)]
-    (when (not (or (atomic-value? eval-result)
-                   (empty? eval-result)
-                   (help/atomic-single-value-coll? eval-result)))
-      (throw (Exception. (str "Pathlang runtime exception. "
-                              "Evaluated argument must be an atomic value, "
-                              "empty collection or collection with one element. "
-                              "Returned " eval-result " on element " el "."))))
-    (logical-false? eval-result)))
+  (logical-false? (pl-eval el context)))
 
 (defmethod pl-eval '>
   [[_ & args] context]
@@ -299,17 +282,9 @@
                                     "a collection of atomic values."))))
         args (help/flatten-top-level args)
         args (filter (fn [curr]
-                       (let [context (assoc context '% curr)
-                             pred-result (pl-eval pred context)
-                             _ (when (not (or (atomic-value? pred-result)
-                                              (empty? pred-result)
-                                              (help/atomic-single-value-coll? pred-result)))
-                                 (throw (Exception.
-                                         (str "Pathlang runtime exception. "
-                                              "The filter predicate must return atomic value, "
-                                              "empty collection or collection with one element. "
-                                              "Returned " pred-result " on element " curr "."))))]
-                         (logical-true? pred-result)))
+                       (->> (assoc context '% curr)
+                            (pl-eval pred)
+                            (logical-true?)))
                      args)]
     (help/flatten-top-level args)))
 
