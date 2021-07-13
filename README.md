@@ -74,6 +74,48 @@ values have different types. Returns true if any atomic values differ from antoh
 (not= "red" ()) => throws error
 ```
 
+### `or` - (arg1 arg2 & args)
+Accepts two or more argument expressions.
+Evaluates arguments one at a time, from left to right. 
+Evaluated argument must be an atomic value, empty collection or collection with one element.
+false, empty collection or nil are treated as logical false other values are treated as logical true.
+If an expression returns a logical true value, `or` returns true and doesn't
+evaluate any of the other expressions, otherwise it returns false.
+```clojure
+(or nil () false 1 (/ 1 0)) => true
+(or nil ()) => false
+(or 1) => throws error
+(or 1 (())) => throws error
+```
+
+### `and` - (arg1 arg2 & args)
+Accepts two or more argument expressions.
+Evaluates arguments one at a time, from left to right. 
+Evaluated argument must be an atomic value, empty collection or collection with one element.
+false, empty collection or nil are treated as logical false other values are treated as logical true.
+If an expression returns a logical false value, `and` returns false and doesn't
+evaluate any of the other expressions, otherwise it returns true.
+```clojure
+(and () (/ 1 0)) => false
+(and 1 "a" :a (now)) => true
+(and 1) => throws error
+(and 1 (())) => throws error
+```
+
+### `not` - (arg)
+Accepts one argument expression.
+Evaluated argument must be an atomic value, empty collection or collection with one element.
+Returns true if evaluated expression is logical false (false, nil or empty collection), false otherwise.
+```clojure
+(not ()) => true
+(not nil) => true
+(not false) => true
+(not "string") => false
+(not :a) => false
+(not :a :b) => throws error
+(not (())) => throws error
+```
+
 ### `>` - (arg1 arg2 & args)
 Accepts two or more arguments which can be an atomic value or a collection of atomic
 values. Throws error if collection contains more than one element or zero elements.

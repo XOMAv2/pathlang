@@ -84,6 +84,27 @@
   (is (thrown? Exception (evaluate (str '(not= "red")))))
   (is (thrown? Exception (evaluate (str '(not= "red" ()))))))
 
+(deftest or-test
+  (is (= true            (evaluate (str '(or nil () false 1 (/ 1 0))))))
+  (is (= false           (evaluate (str '(or nil ())))))
+  (is (thrown? Exception (evaluate (str '(or 1)))))
+  (is (thrown? Exception (evaluate (str '(or 1 (())))))))
+
+(deftest and-test
+  (is (= false           (evaluate (str '(and () (/ 1 0))))))
+  (is (= true            (evaluate (str '(and 1 "a" :a (now))))))
+  (is (thrown? Exception (evaluate (str '(and 1)))))
+  (is (thrown? Exception (evaluate (str '(and 1 (())))))))
+
+(deftest not-test
+  (is (= true            (evaluate (str '(not ())))))
+  (is (= true            (evaluate (str '(not nil)))))
+  (is (= true            (evaluate (str '(not false)))))
+  (is (= false           (evaluate (str '(not "string")))))
+  (is (= false           (evaluate (str '(not :a)))))
+  (is (thrown? Exception (evaluate (str '(not :a :b)))))
+  (is (thrown? Exception (evaluate (str '(not (())))))))
+
 (deftest >-test
   (is (=       false     (evaluate (str '(> 1 2)))))
   (is (=       true      (evaluate (str '(> 2 1 -1)))))

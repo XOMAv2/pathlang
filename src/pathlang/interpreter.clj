@@ -5,7 +5,7 @@
             [pathlang.spec :as pls]))
 
 (def std-fns #{'list 'if 'count ; :keyword :implicit-list :value
-               '= 'not= '> '< '>= '<=
+               '= 'not= 'or 'and 'not '> '< '>= '<=
                '+ '* '- '/ 'sum 'product
                'filter 'map 'select-keys
                'now 'years 'months 'weeks 'days 'hours 'minutes
@@ -41,7 +41,7 @@
   [expression context]
   (cond (and (symbol? expression) (contains? context expression))
         (get context expression)
-
+        
         (symbol? expression)
         (throw (Exception. (str "Pathlang runtime exception. "
                                 "Unable to resolve symbol: " expression " in this context.")))
@@ -135,6 +135,57 @@
   (let [args (map #(pl-eval % context) args)
         args (check-and-flatten-args args :ignore-nil true)]
     (apply not= args)))
+
+(defmethod pl-eval 'or
+  [[_ & args] context]
+  (when (< (count args) 2)
+    (throw (Exception. (str "Pathlang syntax exception. "
+                            "Function accepts two or more arguments."))))
+  (-> (some (fn [el]
+              (let [eval-result (pl-eval el context)]
+                (when (not (or (atomic-value? eval-result)
+                               (empty? eval-result)
+                               (help/atomic-single-value-coll? eval-result)))
+                  (throw (Exception. (str "Pathlang runtime exception. "
+                                          "Evaluated argument must be an atomic value, "
+                                          "empty collection or collection with one element. "
+                                          "Returned " eval-result " on element " el "."))))
+                (logical-true? eval-result)))
+            args)
+      (or false)))
+
+(defmethod pl-eval 'and
+  [[_ & args] context]
+  (when (< (count args) 2)
+    (throw (Exception. (str "Pathlang syntax exception. "
+                            "Function accepts two or more arguments."))))
+  (-> (some (fn [el]
+              (let [eval-result (pl-eval el context)]
+                (when (not (or (atomic-value? eval-result)
+                               (empty? eval-result)
+                               (help/atomic-single-value-coll? eval-result)))
+                  (throw (Exception. (str "Pathlang runtime exception. "
+                                          "Evaluated argument must be an atomic value, "
+                                          "empty collection or collection with one element. "
+                                          "Returned " eval-result " on element " el "."))))
+                (logical-false? eval-result)))
+            args)
+      (not)))
+
+(defmethod pl-eval 'not
+  [[_ el :as expression] context]
+  (when (not= 2 (count expression))
+    (throw (Exception. (str "Pathlang syntax exception. "
+                            "Function accepts only one argument."))))
+  (let [eval-result (pl-eval el context)]
+    (when (not (or (atomic-value? eval-result)
+                   (empty? eval-result)
+                   (help/atomic-single-value-coll? eval-result)))
+      (throw (Exception. (str "Pathlang runtime exception. "
+                              "Evaluated argument must be an atomic value, "
+                              "empty collection or collection with one element. "
+                              "Returned " eval-result " on element " el "."))))
+    (logical-false? eval-result)))
 
 (defmethod pl-eval '>
   [[_ & args] context]
