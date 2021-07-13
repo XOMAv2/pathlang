@@ -50,9 +50,9 @@
 (defmethod pl-eval :keyword
   [[keyword & args] context]
   (let [args (map #(pl-eval % context) args)
-        _ (when (not (help/each-arg-valid? args
-                                           map?
-                                           #(and (coll? %) (every? map? %))))
+        _ (when (not (help/every-arg-by-some-pred args
+                                                  map?
+                                                  #(and (coll? %) (every? map? %))))
             (throw (Exception. (str "Pathlang syntax exception. "
                                     "Each function argument must be a map or "
                                     "collection of maps."))))
