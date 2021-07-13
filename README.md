@@ -84,8 +84,9 @@ evaluate any of the other expressions, otherwise it returns false.
 ```clojure
 (or nil () false 1 (/ 1 0)) => true
 (or nil ()) => false
+(or 1 (())) => true
 (or 1) => throws error
-(or 1 (())) => throws error
+(or (()) 1) => throws error
 ```
 
 ### `and` - (arg1 arg2 & args)
@@ -321,8 +322,9 @@ If the result of applying fn to an argument is a collection, it will be merged i
 ```clojure
 (map (+ % 1) (1 2 3) 4 (5)) => (2 3 4 5 6)
 (map (:x %) {:x 1}) => (1)
-(map (:x %) (({:x 1} {:y 1}))) => (1 nil)
+(map (:x %) ({:x 1} {:y 1})) => (1 nil)
 (map % 0 () nil (1) (2 3)) => (0 nil 1 2 3)
+(map (:x %) (({:x 1} {:y 1}))) => throws error
 (map (map (+ 1 %) %) (1 2 3) (4 5 6)) => throws error
 ```
 

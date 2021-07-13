@@ -87,8 +87,9 @@
 (deftest or-test
   (is (= true            (evaluate (str '(or nil () false 1 (/ 1 0))))))
   (is (= false           (evaluate (str '(or nil ())))))
+  (is (= true            (evaluate (str '(or 1 (()))))))
   (is (thrown? Exception (evaluate (str '(or 1)))))
-  (is (thrown? Exception (evaluate (str '(or 1 (())))))))
+  (is (thrown? Exception (evaluate (str '(or (()) 1))))))
 
 (deftest and-test
   (is (= false           (evaluate (str '(and () (/ 1 0))))))
@@ -218,8 +219,9 @@
 (deftest map-test
   (is (= '(2 3 4 5 6)    (evaluate (str '(map (+ % 1) (1 2 3) 4 (5))))))
   (is (= '(1)            (evaluate (str '(map (:x %) {:x 1})))))
-  (is (= '(1 nil)        (evaluate (str '(map (:x %) (({:x 1} {:y 1})))))))
+  (is (= '(1 nil)        (evaluate (str '(map (:x %) ({:x 1} {:y 1}))))))
   (is (= '(0 nil 1 2 3)  (evaluate (str '(map % 0 () nil (1) (2 3))))))
+  (is (thrown? Exception (evaluate (str '(map (:x %) (({:x 1} {:y 1})))))))
   (is (thrown? Exception (evaluate (str '(map (map (+ 1 %) %) (1 2 3) (4 5 6)))))))
 
 (deftest select-keys-test
@@ -308,8 +310,8 @@
                           :car-state/long-value 10.7}
                          {:id 3
                           :car-state/feature {:db/id 90
-                                              :feature/code :height
-                                              :feature/name "Height"}
+                                              :feature/code :feature-00001
+                                              :feature/name "Feature 00001"}
                           :car-state/long-value 10.7}]}]
     (testing "Complex example #1."
       (is (= (apply list (:car/state car))
@@ -328,4 +330,51 @@
                                  (filter (= (:feature/code (:car-state/feature %)) :color)
                                          (:car/state $)))
                                 "black"))
+                       {'$ car}))))
+    (testing "Complex example #2."
+      (is (= '({:id 1
+                :car-state/feature {:db/id 70
+                                    :feature/code :color
+                                    :feature/name "Color"}
+                :car-state/value-code "black"
+                :car-state/long-value 10.7}
+               {:id 3
+                :car-state/feature {:db/id 90
+                                    :feature/code :feature-00001
+                                    :feature/name "Feature 00001"}
+                :car-state/long-value 10.7})
+             (evaluate (str '(filter
+                              (or (= (:db/id (:car-state/feature %)) 70)
+                                  (= (:db/id (:car-state/feature %)) 90))
+                              (:car/state $)))
+                       {'$ car})))
+      (is (= false
+             (evaluate (str '(>
+                              (sum
+                               (:car-state/long-value
+                                (filter
+                                 (or (= (:db/id (:car-state/feature %)) 70)
+                                     (= (:db/id (:car-state/feature %)) 90))
+                                 (:car/state $))))
+                              1000.0))
+                       {'$ car}))))
+    (testing "Complex example #3."
+      (is (= '({:car/name "Bus"})
+             (evaluate (str '(if (filter
+                                  (= (:feature/code
+                                      (:car-state/feature %))
+                                     :feature-00001)
+                                  (:car/state $))
+                               (select-keys (list :car/name) $)
+                               ()))
+                       {'$ car}))))
+    (testing "Complex example #4."
+      (is (= '({})
+             (evaluate (str '(select-keys
+                              (list :car/name)
+                              (filter
+                               (= (:feature/code
+                                   (:car-state/feature %))
+                                  :feature-00001)
+                               (:car/state $))))
                        {'$ car}))))))
