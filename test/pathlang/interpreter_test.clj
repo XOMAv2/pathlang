@@ -1,6 +1,6 @@
-(ns pathlang.core-test
+(ns pathlang.interpreter-test
   (:require [clojure.test :as test :refer [deftest testing is]]
-            [pathlang.core :as pl :refer [evaluate]]))
+            [pathlang.interpreter :as pl :refer [evaluate]]))
 
 (deftest keyword-test
   (is (= '(1 2 nil)      (evaluate (str '(:foo {:foo 1} ({:foo 2} {:bar 1}) ())))))

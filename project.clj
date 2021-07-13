@@ -6,4 +6,4 @@
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [expound "0.8.9"] ; Приятные отчёты об ошибках для clojure.spec.alpha.
                  ]
-  :repl-options {:init-ns pathlang.core})
+  :repl-options {:init-ns pathlang.interpreter})
