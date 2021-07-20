@@ -1,5 +1,6 @@
 (ns pathlang.helpers
-  (:require [expound.alpha :as ex]))
+  (:require [expound.alpha :as ex]
+            [clojure.repl :refer [demunge]]))
 
 (defn atomic-value?
   "In terms of pathlang an atomic value is any non-collection or map."
@@ -49,3 +50,27 @@
                                     :or {ignore-nil false}}]
   (let [coll (if ignore-nil (filter some? coll) coll)]
     (apply = (map type coll))))
+
+(defn fn-name
+  #_"https://stackoverflow.com/questions/22116257/how-to-get-functions-name-as-string-in-clojure"
+  [f]
+  (as-> (str f) $
+    (demunge $)
+    (or (re-find #"(.+)--\d+@" $)
+        (re-find #"(.+)@" $))
+    (last $)))
+
+(defn date? [x]
+  (instance? java.util.Date x))
+
+(defn contains?-update
+  ([m k f]
+   (if (contains? m k) (update m k f) m))
+  ([m k f x]
+   (if (contains? m k) (update m k f x) m))
+  ([m k f x y]
+   (if (contains? m k) (update m k f x y) m))
+  ([m k f x y z]
+   (if (contains? m k) (update m k f x y z) m))
+  ([m k f x y z & more]
+   (if (contains? m k) (apply update m k f x y z more) m)))
