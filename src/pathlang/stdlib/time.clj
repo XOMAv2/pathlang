@@ -1,4 +1,4 @@
-(ns pathlang.time)
+(ns pathlang.stdlib.time)
 
 (defn now []
   (-> #_(.instant (java.time.Clock/systemUTC))

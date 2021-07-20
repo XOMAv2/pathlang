@@ -1,7 +1,7 @@
 (ns pathlang.interpreter
   (:require [clojure.spec.alpha :as s]
             [pathlang.helpers :as help :refer [atomic-value?]]
-            [pathlang.time :as time]
+            [pathlang.stdlib.time :as time]
             [pathlang.spec :as pls]))
 
 (def std-fns #{'list 'if 'count ; :keyword :implicit-list :value
