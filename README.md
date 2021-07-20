@@ -251,8 +251,8 @@ first element and product of all successive elements.
 (/ 2 (nil)) => throws error
 ```
 
-### `sum` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
+### `sum` - (arg1 & args)
+Accepts one or more arguments which can be an atomic value or a collection of atomic
 values. Throws error if not all atomic values have same types. Supports numbers. Returns
 sum of all elements of all collection.
 ```clojure
@@ -266,8 +266,8 @@ sum of all elements of all collection.
 (sum 2 (2 nil)) => throws error
 ```
 
-### `product` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
+### `product` - (arg1 & args)
+Accepts one or more arguments which can be an atomic value or a collection of atomic
 values. Throws error if not all atomic values have same types. Supports numbers. Returns
 product of all elements of all collection.
 ```clojure
@@ -292,9 +292,10 @@ of passed arguments.
 (list 1 "2" {:x 1}) => (1 "2" {:x 1})
 (list) => ()
 (list ()) => throws error
+(list 1 2 (3 4) 5) => throws error
 ```
 
-### `filter` - (pred arg & args)
+### `filter` - (pred arg1 & args)
 Accepts two or more arguments. First argument must be an expression which works on atomic
 value and returns atomic value, empty collection or collection with one element. If this expression returns
 false, empty collection or nil they treat as logical false other values treat as logical
@@ -311,7 +312,7 @@ point on currently proccessing element.
 (filter % 0 (1 (2 3) 4) 5) => throws error
 ```
 
-### `map` - (fn args & args)
+### `map` - (fn arg1 & args)
 Accepts two or more arguments. First argument must be an expression which works on atomic
 value and returns transformed value.
 Second and other arguments can be an atomic value or collection of atomic values.
@@ -345,7 +346,7 @@ will be evaluated otherwise else expression will be evaluated.
   "success") => throws error
 ```
 
-### `select-keys` - (fn args & args)
+### `select-keys` - (fn arg1 & args)
 Accepts two and more arguments. First argument must be an expression which works on atomic
 value and returns collection of keyword which must be gathered from processing element. Function
 works with maps and datomic entities.
@@ -364,7 +365,7 @@ works with maps and datomic entities.
               {"x" 3 111 :a})) => ({"x" 1} {"x" 3 111 :a})
 ```
 
-### `count` - (args & args)
+### `count` - (arg1 & args)
 Accepts one or more arguments. Each argument can be an atomic value or collection. Returns sum
 of all collection lengths. Atomic value is assumed to be a collection with one element.
 ```clojure
@@ -383,7 +384,7 @@ Accepts no arguments. Returns now datetime.
 (now) => #inst "2021-01-01T20:00"
 ```
 
-### `years`, `months`, `days`, `hours`, `minutes` - (n)
+### `years`, `months`, `days`, `weeks`, `hours`, `minutes` - (n)
 Accepts one argument which must be a number. Returns structure that can be used for adding or
 subtracting to date.
 ```clojure
