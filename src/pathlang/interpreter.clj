@@ -1,45 +1,20 @@
 (ns pathlang.interpreter
   (:require [clojure.spec.alpha :as s]
             [pathlang.helpers :as help :refer [atomic-value?]]
-            [pathlang.stdlib.time :as time]
+            [pathlang.stdlib :as std]
+            [clojure.core.match :refer [match]]
             [pathlang.spec :as pls]))
-
-(def std-fns #{'list 'if 'count ; :keyword :implicit-list :value
-               '= 'not= 'or 'and 'not '> '< '>= '<=
-               '+ '* '- '/ 'sum 'product
-               'filter 'map 'select-keys
-               'now 'years 'months 'weeks 'days 'hours 'minutes
-               'year-start 'month-start 'day-start
-               'date 'datetime 'at-zone})
-
-(def logical-false #{false () #{} nil})
-
-(defn logical-false? [x]
-  (when (not (or (atomic-value? x)
-                 (empty? x)
-                 (help/atomic-single-value-coll? x)))
-    (throw (Exception. (str "Pathlang runtime exception. "
-                            "Implicit conversion to logical true or false is "
-                            "available only for atomic values, empty "
-                            "collections and single atomic value collections."))))
-  (contains? logical-false x))
-
-(defn logical-true? [x]
-  (not (logical-false? x)))
 
 (defn get-fn
   [expression context]
-  (cond (map? expression)
-        :hash-map
-
-        (coll? expression)
-        (let [first-el (first expression)]
-          (cond (contains? std-fns first-el) first-el
-                (keyword? first-el) :keyword
-                (contains? (dissoc context '$) first-el) :user-fn
-                :else :implicit-list))
-
-        :else :value))
+  (let [result (cond
+                 (map? expression) :hash-map
+                 (atomic-value? expression) :value
+                 (keyword? (first expression)) :keyword
+                 (contains? (dissoc context '$) (first expression)) :fn
+                 :else :implicit-list)]
+    #_(println [result expression])
+    result))
 
 (defmulti ^:private pl-eval
   #'get-fn)
@@ -50,8 +25,12 @@
         (get context expression)
         
         (symbol? expression)
-        (throw (Exception. (str "Pathlang runtime exception. "
-                                "Unable to resolve symbol: " expression " in this context.")))
+        (throw (ex-info (str "Pathlang interpreter cannot resolve symbol "
+                             expression
+                             " in this context.")
+                        {:cause :pathlang-interpreter-symbol-evaluation
+                         :expression expression
+                         :context context}))
         
         :else expression))
 
@@ -62,354 +41,86 @@
               [(pl-eval k context) (pl-eval v context)]))
        (into {})))
 
-(defmethod pl-eval :keyword
-  [[keyword & args] context]
-  (let [args (map #(pl-eval % context) args)
-        _ (when (not (help/every-arg-by-some-pred args
-                                                  map?
-                                                  #(and (coll? %) (every? map? %))))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each function argument must be a map or "
-                                    "collection of maps."))))
-        args (help/flatten-top-level args)
-        args (map #(get % keyword) args)]
-    (help/flatten-top-level args)))
-
-(defmethod pl-eval 'list
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        _ (when (not (help/every-arg-by-some-pred args
-                                                  atomic-value?
-                                                  help/atomic-single-value-coll?))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each function argument must be an atomic value or "
-                                    "a collection of a single atomic value."))))]
-    (help/flatten-top-level args)))
-
 (defmethod pl-eval :implicit-list
   [args context]
-  (let [args (map #(pl-eval % context) args)
-        _ (when (not (help/every-arg-by-some-pred args
-                                                  atomic-value?
-                                                  help/atomic-single-value-coll?))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each function argument must be an atomic value or "
-                                    "a collection of a single atomic value."))))]
-    (help/flatten-top-level args)))
-
-(defmethod pl-eval 'if
-  [[_ test t-branch f-branch :as expression] context]
-  (when (not= 4 (count expression))
-    (throw (Exception. (str "Pathlang syntax exception."
-                            "The if function expects exactly 3 arguments."))))
-  (if (logical-true? (pl-eval test context))
-    (pl-eval t-branch context)
-    (pl-eval f-branch context)))
-
-(defmethod pl-eval 'count
-  [[_ & args] context]
   (->> (map #(pl-eval % context) args)
-       (map #(if (-> % atomic-value? not) (count %) 1))
-       (apply +)))
+       (apply (pl-eval 'list context)))
+  #_"Seceond solution lead to stackoverflow exception if empty context is passed."
+  #_(pl-eval (cons 'list args) context))
 
-(defn check-and-flatten-args [args & {:keys [ignore-nil check-types]
-                                      :or {ignore-nil false
-                                           check-types true}}]
-  (let [_ (when (not (help/every-arg-by-some-pred args
-                                                  atomic-value?
-                                                  help/atomic-single-value-coll?))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each function argument must be an atomic value or "
-                                    "a collection of a single atomic value."))))
-        args (help/flatten-top-level args)
-        _ (when (< (count args) 2)
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Function accepts two or more arguments."))))
-        _ (when (and check-types
-                     (not (help/same-top-level-type? args :ignore-nil ignore-nil)))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each atomic value must have the same type."))))]
-    args))
+(defmethod pl-eval :keyword
+  [args context]
+  (->> (map #(pl-eval % context) args)
+       (apply (pl-eval 'keyword context))))
 
-(defmethod pl-eval '=
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args :ignore-nil true)]
-    (apply = args)))
+(defn eval-args
+  "If :fn-indexes key is set to true, the arguments with the specified indexes will 
+   be wrapped into lambda expressions to evaluate them on demand.
+   :fn-indexes can be nil, set of indexes or :all keyword.
+   If :fn-take-arg? key is set to true, the created lambda will take one argument, 
+   which will be associated to the context by the key '%."
+  [args context & {:keys [fn-indexes fn-take-arg?]}]
+  (match [fn-indexes fn-take-arg?]
+    [nil _]     (map (fn [arg] (pl-eval arg context)) args)
+    [:all true] (map (fn [arg] (fn [curr] (pl-eval arg (assoc context '% curr)))) args)
+    [:all _]    (map (fn [arg] #(pl-eval arg context)) args)
+    :else       (map-indexed (fn [index arg]
+                               (match [(contains? fn-indexes index) fn-take-arg?]
+                                 [true true] (fn [curr] (pl-eval arg (assoc context '% curr)))
+                                 [true _] #(pl-eval arg context)
+                                 :else (pl-eval arg context)))
+                             args)))
 
-(defmethod pl-eval 'not=
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args :ignore-nil true)]
-    (apply not= args)))
-
-(defmethod pl-eval 'or
-  [[_ & args] context]
-  (when (< (count args) 2)
-    (throw (Exception. (str "Pathlang syntax exception. "
-                            "Function accepts two or more arguments."))))
-  (-> (some (fn [el]
-              (logical-true? (pl-eval el context)))
-            args)
-      (or false)))
-
-(defmethod pl-eval 'and
-  [[_ & args] context]
-  (when (< (count args) 2)
-    (throw (Exception. (str "Pathlang syntax exception. "
-                            "Function accepts two or more arguments."))))
-  (-> (some (fn [el]
-              (logical-false? (pl-eval el context)))
-            args)
-      (not)))
-
-(defmethod pl-eval 'not
-  [[_ el :as expression] context]
-  (when (not= 2 (count expression))
-    (throw (Exception. (str "Pathlang syntax exception. "
-                            "Function accepts only one argument."))))
-  (logical-false? (pl-eval el context)))
-
-(defmethod pl-eval '>
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)]
-    (apply > args)))
-
-(defmethod pl-eval '<
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)]
-    (apply < args)))
-
-(defmethod pl-eval '>=
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)]
-    (apply >= args)))
-
-(defmethod pl-eval '<=
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)]
-    (apply <= args)))
-
-(defmethod pl-eval '+
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args :check-types false)
-        arg1 (first args)
-        _ (when (not (or (help/same-top-level-type? args)
-                         (instance? java.util.Date (first args))))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each atomic value must have the same type."))))]
-    (cond
-      (number? arg1) (apply + args)
-      (string? arg1) (apply str args)
-      (instance? java.util.Date arg1) (apply time/add args)
-      :else (throw (Exception. (str "Pathlang syntax exception. "
-                                    "The + function supports only numbers, strings, and dates."))))))
-
-(defmethod pl-eval '*
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)]
-    (if (number? (first args))
-      (apply * args)
-      (throw (Exception. (str "Pathlang syntax exception. "
-                              "The * function supports only numbers."))))))
-
-(defmethod pl-eval '-
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args :check-types false)
-        arg1 (first args)
-        _ (when (not (or (help/same-top-level-type? args)
-                         (instance? java.util.Date (first args))))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each atomic value must have the same type."))))]
-    (cond
-      (number? arg1) (apply - args)
-      (instance? java.util.Date arg1) (apply time/subtract args)
-      :else (throw (Exception. (str "Pathlang syntax exception. "
-                                    "The - function supports only numbers and dates."))))))
-
-(defmethod pl-eval '/
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (check-and-flatten-args args)
-        arg1 (first args)]
-    (if (number? arg1)
-      (apply / args)
-      (throw (Exception. (str "Pathlang syntax exception. "
-                              "The / function supports only numbers and dates."))))))
-
-(defmethod pl-eval 'sum
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (help/flatten-top-level args)
-        _ (when (not (help/same-top-level-type? args))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each atomic value must have the same type."))))]
-    (if (number? (first args))
-      (apply + args)
-      (throw (Exception. (str "Pathlang syntax exception. "
-                              "The sum function supports only numbers."))))))
-
-(defmethod pl-eval 'product
-  [[_ & args] context]
-  (let [args (map #(pl-eval % context) args)
-        args (help/flatten-top-level args)
-        _ (when (not (help/same-top-level-type? args))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Each atomic value must have the same type."))))]
-    (if (number? (first args))
-      (apply * args)
-      (throw (Exception. (str "Pathlang syntax exception. "
-                              "The product function supports only numbers."))))))
-
-(defmethod pl-eval 'filter
-  [[_ pred & args :as expression] context]
-  (when (< (count expression) 3)
-    (throw (Exception. (str "Pathlang syntax exception. "
-                            "The filter function expects two or more arguments."))))
-  (let [args (map #(pl-eval % context) args)
-        _ (when (not (help/every-arg-by-some-pred args
-                                                  atomic-value?
-                                                  (partial every? atomic-value?)))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Second and other function argument must be an atomic value or "
-                                    "a collection of atomic values."))))
-        args (help/flatten-top-level args)
-        args (filter (fn [curr]
-                       (->> (assoc context '% curr)
-                            (pl-eval pred)
-                            (logical-true?)))
-                     args)]
-    (help/flatten-top-level args)))
-
-(defmethod pl-eval 'map
-  [[_ pred & args :as expression] context]
-  (when (< (count expression) 3)
-    (throw (Exception. (str "Pathlang syntax exception. "
-                            "The map function expects two or more arguments."))))
-  (let [args (map #(pl-eval % context) args)
-        _ (when (not (help/every-arg-by-some-pred args
-                                                  atomic-value?
-                                                  (partial every? atomic-value?)))
-            (throw (Exception. (str "Pathlang syntax exception. "
-                                    "Second and other function argument must be an atomic value or "
-                                    "a collection of atomic values."))))
-        args (help/flatten-top-level args :keep-empty-lists true)
-        result (reduce (fn [acc curr]
-                         (let [context (assoc context '% curr)
-                               pred-result (pl-eval pred context)]
-                           (if (-> pred-result atomic-value? not)
-                             (into acc pred-result)
-                             (conj acc pred-result))))
-                       [] args)]
-    (apply list result)))
-
-(defmethod pl-eval 'select-keys
-  [[_ pred & args :as expression] context]
-  (when (< (count expression) 3)
-    (throw (Exception. (str "Pathlang syntax exception. "
-                            "The select-keys function expects two or more arguments."))))
-  (let [args (map #(pl-eval % context) args)
-        args (help/flatten-top-level args)
-        _ (when (or (not (help/same-top-level-type? args))
-                    (not= (type {}) (type (first args)))) ; ???: hash-map or datomic entity
-            (throw (Exception. "Pathlang syntax exception. "
-                               "Each atomic value must be the hash-map.")))]
-    (map (fn [curr]
-           (->> (assoc context '% curr)
-                (pl-eval pred)
-                (select-keys curr)))
-         args)))
-
-(defmethod pl-eval 'now
-  [_ _]
-  (time/now))
-
-(defmethod pl-eval 'years
-  [[_ n] context]
-  (time/years (pl-eval n context)))
-
-(defmethod pl-eval 'months
-  [[_ n] context]
-  (time/months (pl-eval n context)))
-
-(defmethod pl-eval 'weeks
-  [[_ n] context]
-  (time/weeks (pl-eval n context)))
-
-(defmethod pl-eval 'days
-  [[_ n] context]
-  (time/days (pl-eval n context)))
-
-(defmethod pl-eval 'hours
-  [[_ n] context]
-  (time/hours (pl-eval n context)))
-
-(defmethod pl-eval 'minutes
-  [[_ n] context]
-  (time/minutes (pl-eval n context)))
-
-(defmethod pl-eval 'year-start
-  [[_ d] context]
-  (time/year-start (pl-eval d context)))
-
-(defmethod pl-eval 'month-start
-  [[_ d] context]
-  (time/month-start (pl-eval d context)))
-
-(defmethod pl-eval 'day-start
-  [[_ d] context]
-  (time/day-start (pl-eval d context)))
-
-(defmethod pl-eval 'date
-  [[_ year month day] context]
-  (time/date (pl-eval year context)
-             (pl-eval month context)
-             (pl-eval day context)))
-
-(defmethod pl-eval 'datetime
-  [[_ year month day hour minute] context]
-  (time/datetime (pl-eval year context)
-                 (pl-eval month context)
-                 (pl-eval day context)
-                 (pl-eval hour context)
-                 (pl-eval minute context)))
-
-(defmethod pl-eval 'at-zone
-  [[_ datetime timezone] context]
-  (time/at-zone (pl-eval datetime context)
-                (pl-eval timezone context)))
-
-(defmethod pl-eval :user-fn
+(defmethod pl-eval :fn
   [[fn-name & args] context]
-  (let [args (map #(pl-eval % context) args)
+  (let [args (match fn-name
+               'if (eval-args args context :fn-indexes #{1 2})
+
+               (:or 'or 'and)
+               (eval-args args context :fn-indexes :all)
+               
+               (:or 'filter 'map 'select-keys)
+               (eval-args args context :fn-indexes #{0} :fn-take-arg? true)
+
+               :else (eval-args args context))
         fn-name (pl-eval fn-name context)]
     (apply fn-name args)))
 
 (defmethod pl-eval :default
-  [_ _]
-  (throw (Exception. "Pathlang syntax exception.")))
+  [expression context]
+  (throw (ex-info (format (str "Pathlang interpreter does not provide "
+                               "method for dispatched expression %s.")
+                          expression)
+                  {:cause :pathlang-interpreter-dispatching
+                   :expression expression
+                   :context context})))
 
 (defn evaluate
-  "Wrapper over the pl-eval function for argument validation."
+  "Wrapper over the pl-eval function for argument validation 
+   and providing standard functions context."
   ([expression] (evaluate expression {}))
   ([expression context]
    (let [expression (read-string expression)]
      (when (not (s/valid? ::pls/expression expression))
-       (throw (Exception. (str "Pathlang syntax exception in the evaluation expression.\n"
-                               (help/beautiful-spec-explain ::pls/expression expression)))))
+       (throw (throw (ex-info "Pathlang syntax exception in the evaluation expression."
+                              {:cause :pathlang-syntax
+                               :called-function evaluate
+                               :arg-value expression
+                               :spec ::pls/expression
+                               :spec-explain (help/beautiful-spec-explain
+                                              ::pls/expression expression)}))))
      (when (not (s/valid? ::pls/context context))
-       (throw (Exception. (str "Pathlang syntax exception in the evaluation context.\n"
-                               (help/beautiful-spec-explain ::pls/context context)))))
-     (let [result (pl-eval expression context)]
+       (throw (throw (ex-info "Pathlang syntax exception in the evaluation context."
+                              {:cause :pathlang-syntax
+                               :called-function evaluate
+                               :arg-value context
+                               :spec ::pls/context
+                               :spec-explain (help/beautiful-spec-explain
+                                              ::pls/context context)}))))
+     (let [context (into context std/fns)
+           result (pl-eval expression context)]
        (if (seq? result)
          (doall result)
          result)))))
 
-#_(evaluate "(ext/kek $)" {'$ 42 'ext/kek (fn [a] a)})
+#_(evaluate "((:key {:key 1}) (ext/kek $))" {'$ 42 'ext/kek (fn [a] a)})

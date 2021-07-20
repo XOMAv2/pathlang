@@ -1,5 +1,6 @@
 (ns pathlang.interpreter-test
   (:require [clojure.test :as test :refer [deftest testing is]]
+            [pathlang.stdlib :as std]
             [pathlang.interpreter :as pl :refer [evaluate]]))
 
 (deftest keyword-test
@@ -16,7 +17,8 @@
   (is (= '(1 2 3)        (evaluate (str '(1 2 (3))))))
   (is (= '(1 "2" {:x 1}) (evaluate (str '(1 "2" {:x 1})))))
   (is (= '()             (evaluate (str '()))))
-  (is (thrown? Exception (evaluate (str '(()))))))
+  (is (thrown? Exception (evaluate (str '(())))))
+  (is (thrown? Exception (evaluate (str '(1 2 (3 4) 5))))))
 
 (deftest value-test
   (is (thrown? Exception (evaluate (str 5))))
@@ -26,21 +28,22 @@
   (is (= nil             (#'pl/pl-eval nil {})))
   (is (= \newline        (#'pl/pl-eval \newline {})))
   (is (= "some str"      (#'pl/pl-eval "some str" {})))
-  (is (= ()              (#'pl/pl-eval () {})))
+  (is (= ()              (#'pl/pl-eval () std/fns)))
   (is (= :keyword        (#'pl/pl-eval :keyword {})))
-  (is (thrown? Exception (doall (#'pl/pl-eval ''q-symbol {}))))
+  (is (thrown? Exception (doall (#'pl/pl-eval ''q-symbol std/fns))))
   (is (thrown? Exception (#'pl/pl-eval 'unq-symbol {})))
   (is (= 42              (#'pl/pl-eval '$ {'$ 42}))))
 
 (deftest hash-map-test
-  (is (= {"xy" 3} (#'pl/pl-eval '{(+ "x" "y") (+ 1 $)} {'$ 2}))))
+  (is (= {"xy" 3} (#'pl/pl-eval '{(+ "x" "y") (+ 1 $)} (merge std/fns {'$ 2})))))
 
 (deftest list-test
   (is (= '(1 2)          (evaluate (str '(list 1 2)))))
   (is (= '(1 2 3)        (evaluate (str '(list 1 2 (3))))))
   (is (= '(1 "2" {:x 1}) (evaluate (str '(list 1 "2" {:x 1})))))
   (is (= '()             (evaluate (str '(list)))))
-  (is (thrown? Exception (evaluate (str '(list ()))))))
+  (is (thrown? Exception (evaluate (str '(list ())))))
+  (is (thrown? Exception (evaluate (str '(1 2 (3 4) 5))))))
 
 (deftest if-test
   (is (= 1               (evaluate (str '(if ()
@@ -378,3 +381,16 @@
                                   :feature-00001)
                                (:car/state $))))
                        {'$ car}))))))
+
+#_(testing "Complex example #5.")
+
+#_(evaluate
+ (str '(>
+        (+
+         (count
+          (ext/list-cars (now) (- (now) (months 1))))
+         1)
+        10))
+ {'ext/list-cars list-cars})
+
+#_"nil and hash map are interpreted as atomic values"
