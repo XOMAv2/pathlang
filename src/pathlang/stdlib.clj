@@ -83,7 +83,7 @@
                             {:cause :pathlang-internal-type-checking-exception
                              :arg-value arg1
                              :arg-name 'arg1
-                             :type-checkers [number? date]})))))
+                             :type-checkers [number? date?]})))))
 
 (defn pl-* [arg1 arg2 & args]
   (let [args (->> (cons arg1 (cons arg2 args))
@@ -105,7 +105,7 @@
                             {:cause :pathlang-internal-type-checking-exception
                              :arg-value arg1
                              :arg-name 'arg1
-                             :type-checkers [number? date]})))))
+                             :type-checkers [number? date?]})))))
 
 ; /
 (defn pl-division [arg1 arg2 & args]
@@ -185,7 +185,7 @@
                     (partial pl-sum))
    'product     (-> (make-constraint [::pls/atomic-val-0+] ::pls/atomic-val-0+)
                     (partial pl-product))
-   'filter      (-> (make-constraint [fn? ::atomic-val-0+] ::pls/atomic-val-0+)
+   'filter      (-> (make-constraint [fn? ::pls/atomic-val-0+] ::pls/atomic-val-0+)
                     (partial pl-filter))
    'map         (-> (make-constraint [fn? ::pls/atomic-val-0+] ::pls/atomic-val-0+)
                     (partial pl-map))
