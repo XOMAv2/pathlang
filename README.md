@@ -308,7 +308,7 @@ point on currently proccessing element.
 (filter % (1 2 3) (4 5 6 nil false) 7 ()) => (1 2 3 4 5 6 7)
 (filter (:x %) ({:x 1} {:x 2})) => ({:x 1} {:x 2}) 
 (filter true nil () 1 (2) 3 (4 5)) => (nil 1 2 3 4 5)
-(filter (filter (= % 2) %) (0 1)) => throws error
+(filter (filter %2 %1) (0 1)) => (0 1)
 (filter % 0 (1 (2 3) 4) 5) => throws error
 ```
 
@@ -325,8 +325,8 @@ If the result of applying fn to an argument is a collection, it will be merged i
 (map (:x %) {:x 1}) => (1)
 (map (:x %) ({:x 1} {:y 1})) => (1 nil)
 (map % 0 () nil (1) (2 3)) => (0 nil 1 2 3)
+(map (map (* 10 %2) % %1) (1 2)) => (10 10 20 20)
 (map (:x %) (({:x 1} {:y 1}))) => throws error
-(map (map (+ 1 %) %) (1 2 3) (4 5 6)) => throws error
 ```
 
 ### `if` - (test then else)

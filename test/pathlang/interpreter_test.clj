@@ -216,7 +216,7 @@
   (is (= '(1 2 3 4 5 6 7) (evaluate (str '(filter % (1 2 3) (4 5 6 nil false) 7 ())))))
   (is (= '({:x 1} {:x 2}) (evaluate (str '(filter (:x %) ({:x 1} {:x 2}))))))
   (is (= '(nil 1 2 3 4 5) (evaluate (str '(filter true nil () 1 (2) 3 (4 5))))))
-  (is (thrown? Exception  (evaluate (str '(filter (filter (= % 2) %) (0 1))))))
+  (is (= '(0 1)           (evaluate (str '(filter (filter %2 %1) (0 1))))))
   (is (thrown? Exception  (evaluate (str '(filter % 0 (1 (2 3) 4) 5))))))
 
 (deftest map-test
@@ -224,8 +224,8 @@
   (is (= '(1)            (evaluate (str '(map (:x %) {:x 1})))))
   (is (= '(1 nil)        (evaluate (str '(map (:x %) ({:x 1} {:y 1}))))))
   (is (= '(0 nil 1 2 3)  (evaluate (str '(map % 0 () nil (1) (2 3))))))
-  (is (thrown? Exception (evaluate (str '(map (:x %) (({:x 1} {:y 1})))))))
-  (is (thrown? Exception (evaluate (str '(map (map (+ 1 %) %) (1 2 3) (4 5 6)))))))
+  (is (= '(10 10 20 20)  (evaluate (str '(map (map (* 10 %2) % %1) (1 2))))))
+  (is (thrown? Exception (evaluate (str '(map (:x %) (({:x 1} {:y 1}))))))))
 
 (deftest select-keys-test
   (is (= '({:x 1} {:y 1} {:x 3 :y 4})

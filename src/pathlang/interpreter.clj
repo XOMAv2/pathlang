@@ -53,6 +53,19 @@
   (->> (map #(pl-eval % context) args)
        (apply (pl-eval 'keyword context))))
 
+(defn- assoc-% [context value]
+  (let [context (update context :lambda-nesting inc)
+        lambda-nesting (:lambda-nesting context)
+        lambda-sym (symbol (str "%" lambda-nesting))
+        context (assoc context lambda-sym value)]
+    (if (= 1 lambda-nesting)
+        (assoc context '% value)
+        context)
+    #_"To enable interpretation of the % symbol as an argument of the
+       most nested lambda function, you need to uncomment the following form
+       and ignore the previous."
+    #_(assoc context '% value)))
+
 (defn eval-args
   "If :fn-indexes key is set to true, the arguments with the specified indexes will 
    be wrapped into lambda expressions to evaluate them on demand.
@@ -62,11 +75,11 @@
   [args context & {:keys [fn-indexes fn-take-arg?]}]
   (match [fn-indexes fn-take-arg?]
     [nil _]     (map (fn [arg] (pl-eval arg context)) args)
-    [:all true] (map (fn [arg] (fn [curr] (pl-eval arg (assoc context '% curr)))) args)
+    [:all true] (map (fn [arg] (fn [curr] (pl-eval arg (assoc-% context curr)))) args)
     [:all _]    (map (fn [arg] #(pl-eval arg context)) args)
     :else       (map-indexed (fn [index arg]
                                (match [(contains? fn-indexes index) fn-take-arg?]
-                                 [true true] (fn [curr] (pl-eval arg (assoc context '% curr)))
+                                 [true true] (fn [curr] (pl-eval arg (assoc-% context curr)))
                                  [true _] #(pl-eval arg context)
                                  :else (pl-eval arg context)))
                              args)))
@@ -118,6 +131,7 @@
                                :spec-explain (help/beautiful-spec-explain
                                               ::pls/context context)}))))
      (let [context (into context std/fns)
+           context (assoc context :lambda-nesting 0)
            result (pl-eval expression context)]
        (if (seq? result)
          (doall result)
