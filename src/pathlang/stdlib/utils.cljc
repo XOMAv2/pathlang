@@ -41,6 +41,8 @@
                        :called-function called-f
                        :type-checkers type-checkers
                        :ignore-nil ignore-nil
+                       :same-top-level-type? (help/same-top-level-type? args)
+                       :arg-types (map type args)
                        :args args}))))
   args)
 
