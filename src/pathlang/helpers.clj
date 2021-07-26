@@ -31,8 +31,8 @@
 (defn flatten-top-level [coll & {:keys [keep-empty-lists]
                                  :or {keep-empty-lists false}}]
   (mapcat #(cond
-             (and keep-empty-lists (sequential? %) (empty? %)) (list ())
-             (sequential? %) %
+             (and keep-empty-lists (-> % atomic-value? not) (empty? %)) (list ())
+             (-> % atomic-value? not) %
              :else (list %))
           coll))
 

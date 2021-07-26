@@ -79,7 +79,7 @@
 (defn add [date amount1 & amounts]
   (let [date (-> (.toInstant date)
                  (.atZone (java.time.ZoneId/of "UTC")))
-        amounts (into [amount1] amounts)
+        amounts (cons amount1 amounts)
         date (reduce #(.plus % %2) date amounts)]
     (-> (.toInstant date)
         (java.util.Date/from))))
@@ -87,7 +87,7 @@
 (defn subtract [date amount1 & amounts]
   (let [date (-> (.toInstant date)
                  (.atZone (java.time.ZoneId/of "UTC")))
-        amounts (into [amount1] amounts)
+        amounts (cons amount1 amounts)
         date (reduce #(.minus % %2) date amounts)]
     (-> (.toInstant date)
         (java.util.Date/from))))

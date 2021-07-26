@@ -1,6 +1,5 @@
 (ns pathlang.stdlib
   (:require [pathlang.stdlib.time :as time]
-            [clojure.spec.alpha :as s]
             [pathlang.spec :as pls]
             [pathlang.helpers :as help :refer [atomic-value? date?]]
             [pathlang.stdlib.utils :refer [make-constraint check-types
