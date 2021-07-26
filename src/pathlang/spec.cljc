@@ -1,5 +1,5 @@
 (ns pathlang.spec
-  (:require [clojure.spec.alpha :as s]
+  (:require [#?(:clj clojure.spec.alpha :cljs cljs.spec.alpha) :as s]
             [pathlang.helpers :refer [atomic-value?
                                       atomic-single-value-coll?]]))
 

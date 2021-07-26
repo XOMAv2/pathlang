@@ -1,8 +1,9 @@
 (ns pathlang.interpreter
-  (:require [clojure.spec.alpha :as s]
+  (:require [#?(:clj clojure.spec.alpha :cljs cljs.spec.alpha) :as s]
             [pathlang.helpers :as help :refer [atomic-value?]]
+            #?(:cljs [cljs.reader :refer [read-string]])
             [pathlang.stdlib :as std]
-            [clojure.core.match :refer [match]]
+            [#?(:clj clojure.core.match :cljs cljs.core.match) :refer [match]]
             [pathlang.spec :as pls]))
 
 (defn get-fn
@@ -101,9 +102,8 @@
 
 (defmethod pl-eval :default
   [expression context]
-  (throw (ex-info (format (str "Pathlang interpreter does not provide "
-                               "method for dispatched expression %s.")
-                          expression)
+  (throw (ex-info (str "Pathlang interpreter does not provide "
+                       "method for dispatched expression " expression ".")
                   {:cause :pathlang-interpreter-dispatching
                    :expression expression
                    :context context})))
