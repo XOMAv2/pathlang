@@ -1,6 +1,6 @@
 (ns pathlang.interpreter-test
-  (:require #?(:clj [clojure.test :as test :refer [deftest testing is run-tests]]
-               :cljs [cljs.test :as test :refer-macros [deftest testing is run-tests]])
+  (:require #?(:clj [clojure.test :as test :refer [deftest testing is are run-tests]]
+               :cljs [cljs.test :as test :refer-macros [deftest testing is are run-tests]])
             [pathlang.stdlib :as std]
             [pathlang.interpreter :as pl :refer [evaluate]]))
 
