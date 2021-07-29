@@ -37,21 +37,6 @@
              :else (list %))
           coll))
 
-(defn every-arg-by-some-pred
-  "Returns true if any of its predicates return a logical true value
-   against all of its arguments, else it returns false.
-   Returns true for empty collections of args.
-   Predicates are applied to the argument until a logical true is obtained
-   (like `or`-composition of preds)."
-  [args & preds]
-  (let [preds (or preds [any?])]
-    (every? (apply some-fn preds) args)))
-
-(defn same-top-level-type? [coll & {:keys [ignore-nil]
-                                    :or {ignore-nil false}}]
-  (let [coll (if ignore-nil (filter some? coll) coll)]
-    (apply = (map type coll))))
-
 (defn fn-name
   #_"https://stackoverflow.com/questions/22116257/how-to-get-functions-name-as-string-in-clojure"
   [f]
@@ -69,15 +54,3 @@
 
 (defn date? [x]
   (instance? #?(:clj java.util.Date :cljs js/Date) x))
-
-(defn contains?-update
-  ([m k f]
-   (if (contains? m k) (update m k f) m))
-  ([m k f x]
-   (if (contains? m k) (update m k f x) m))
-  ([m k f x y]
-   (if (contains? m k) (update m k f x y) m))
-  ([m k f x y z]
-   (if (contains? m k) (update m k f x y z) m))
-  ([m k f x y z & more]
-   (if (contains? m k) (apply update m k f x y z more) m)))

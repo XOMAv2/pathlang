@@ -71,10 +71,11 @@
 (defn pl-+ [arg1 arg2 & args]
   (let [args (->> (cons arg1 (cons arg2 args))
                   (help/flatten-top-level)
-                  (#(check-types pl-+ % :type-checkers [number? string? date?])))
+                  (#(check-types pl-+ % :type-checkers [int? float? string? date?])))
         arg1 (first args)]
     (cond
-      (number? arg1) (apply + args)
+      (int? arg1) (apply + args)
+      (float? arg1) (apply + args)
       (string? arg1) (apply str args)
       (date? arg1) (apply time/add args)
       :else (throw (ex-info (str "Type checking ended with exception due to the absence of "
@@ -82,47 +83,48 @@
                             {:cause :pathlang-internal-type-checking-exception
                              :arg-value arg1
                              :arg-name 'arg1
-                             :type-checkers [number? date?]})))))
+                             :type-checkers [int? float? string? date?]})))))
 
 (defn pl-* [arg1 arg2 & args]
   (let [args (->> (cons arg1 (cons arg2 args))
                   (help/flatten-top-level)
-                  (#(check-types pl-* % :type-checkers [number?])))]
+                  (#(check-types pl-* % :type-checkers [int? float?])))]
     (apply * args)))
 
 ; -
 (defn pl-subtraction [arg1 arg2 & args]
   (let [args (->> (cons arg1 (cons arg2 args))
                   (help/flatten-top-level)
-                  (#(check-types pl-+ % :type-checkers [number? date?])))
+                  (#(check-types pl-+ % :type-checkers [int? float? date?])))
         arg1 (first args)]
     (cond
-      (number? arg1) (apply - args)
+      (int? arg1) (apply - args)
+      (float? arg1) (apply - args)
       (date? arg1) (apply time/subtract args)
       :else (throw (ex-info (str "Type checking ended with exception due to the absence of "
                                  "the corresponding branch in the cond function.")
                             {:cause :pathlang-internal-type-checking-exception
                              :arg-value arg1
                              :arg-name 'arg1
-                             :type-checkers [number? date?]})))))
+                             :type-checkers [int? float? date?]})))))
 
 ; /
 (defn pl-division [arg1 arg2 & args]
   (let [args (->> (cons arg1 (cons arg2 args))
                   (help/flatten-top-level)
-                  (#(check-types pl-division % :type-checkers [number?])))]
+                  (#(check-types pl-division % :type-checkers [int? float?])))]
     (apply / args)))
 
 (defn pl-sum [arg1 & args]
   (let [args (->> (cons arg1 args)
                   (help/flatten-top-level)
-                  (#(check-types pl-sum % :type-checkers [number?])))]
+                  (#(check-types pl-sum % :type-checkers [int? float?])))]
     (apply + args)))
 
 (defn pl-product [arg1 & args]
   (let [args (->> (cons arg1 args)
                   (help/flatten-top-level)
-                  (#(check-types pl-product % :type-checkers [number?])))]
+                  (#(check-types pl-product % :type-checkers [int? float?])))]
     (apply * args)))
 
 (defn pl-filter [pred arg1 & args]

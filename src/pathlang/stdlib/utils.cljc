@@ -25,23 +25,19 @@
    argument must return true value.
    For date checking it is required to use the pathlang.helpers/date? predicate."
   [called-f args & {:keys [ignore-nil type-checkers]
-                    :or {ignore-nil false
-                         type-checkers #{any?}}}]
-  (let [args (if ignore-nil (filter some? args) args)
-        type-checkers (set type-checkers)]
-    (when (not (or (and (help/same-top-level-type? args)
-                        (->> (first args)
-                             ((apply juxt type-checkers))
-                             (some identity)))
-                   (and (type-checkers date?)
-                        (date? (first args)))))
+                    :or {ignore-nil false}}]
+  (let [args (if ignore-nil (filter some? args) args)]
+    (when (not (or (and (nil? type-checkers)
+                        (apply = (map type args)))
+                   (and (some #{date?} type-checkers)
+                        (date? (first args)))
+                   (some #(every? % args) type-checkers)))
       (throw (ex-info (str "Not all atomic values extracted from function "
                            (help/fn-name called-f) " arguments have the same type.")
                       {:cause :pathlang-type-mismatch
                        :called-function called-f
                        :type-checkers type-checkers
                        :ignore-nil ignore-nil
-                       :same-top-level-type? (help/same-top-level-type? args)
                        :arg-types (map type args)
                        :args args}))))
   args)
