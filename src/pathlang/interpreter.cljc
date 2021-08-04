@@ -12,7 +12,7 @@
                  (map? expression) :hash-map
                  (atomic-value? expression) :value
                  (keyword? (first expression)) :keyword
-                 (contains? (dissoc context '$) (first expression)) :fn
+                 (fn? (get context (first expression))) :fn
                  :else :implicit-list)]
     #_(println [result expression])
     result))
@@ -55,8 +55,8 @@
        (apply (pl-eval 'keyword context))))
 
 (defn- assoc-% [context value]
-  (let [context (update context :lambda-nesting inc)
-        lambda-nesting (:lambda-nesting context)
+  (let [context (vary-meta context update :lambda-nesting inc)
+        lambda-nesting (-> context meta :lambda-nesting)
         lambda-sym (symbol (str "%" lambda-nesting))
         context (assoc context lambda-sym value)]
     (if (= 1 lambda-nesting)
@@ -115,23 +115,27 @@
   ([expression context]
    (let [expression (read-string expression)]
      (when (not (s/valid? ::pls/expression expression))
-       (throw (throw (ex-info "Pathlang syntax exception in the evaluation expression."
-                              {:cause :pathlang-syntax
-                               :called-function evaluate
-                               :arg-value expression
-                               :spec ::pls/expression
-                               :spec-explain (help/beautiful-spec-explain
-                                              ::pls/expression expression)}))))
+       (throw (ex-info "Pathlang syntax exception in the evaluation expression."
+                       {:cause :pathlang-syntax
+                        :called-function evaluate
+                        :arg-value expression
+                        :spec ::pls/expression
+                        :spec-explain (help/beautiful-spec-explain
+                                       ::pls/expression expression)})))
      (when (not (s/valid? ::pls/context context))
-       (throw (throw (ex-info "Pathlang syntax exception in the evaluation context."
-                              {:cause :pathlang-syntax
-                               :called-function evaluate
-                               :arg-value context
-                               :spec ::pls/context
-                               :spec-explain (help/beautiful-spec-explain
-                                              ::pls/context context)}))))
-     (let [context (into context std/fns)
-           context (assoc context :lambda-nesting 0)
+       (throw (ex-info "Pathlang syntax exception in the evaluation context."
+                       {:cause :pathlang-syntax
+                        :called-function evaluate
+                        :arg-value context
+                        :spec ::pls/context
+                        :spec-explain (help/beautiful-spec-explain
+                                       ::pls/context context)})))
+     (when-let [keys (help/key-intersection std/fns context)]
+       (throw (ex-info "Trying to redefine symbols reserved by the pathlang."
+                       {:cause :pathlang-reserved-symbol-redefinition
+                        :redefined-symbols keys})))
+     (let [context (into std/fns context)
+           context (with-meta context {:lambda-nesting 0})
            result (pl-eval expression context)]
        (if (seq? result)
          (doall result)

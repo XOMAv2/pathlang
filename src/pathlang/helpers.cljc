@@ -54,3 +54,13 @@
 
 (defn date? [x]
   (instance? #?(:clj java.util.Date :cljs js/Date) x))
+
+(defn key-intersection
+  ([m1] (keys m1))
+  ([m1 m2] (->> (keys m1)
+                (select-keys m2)
+                (keys)))
+  ([m1 m2 & ms] (reduce (fn [keyseq map]
+                          (keys (select-keys map keyseq)))
+                        (keys m1)
+                        (cons m2 ms))))

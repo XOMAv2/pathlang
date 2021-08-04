@@ -4,12 +4,11 @@
                                       atomic-single-value-coll?]]))
 
 (s/def ::context
-  (s/and (s/map-of
-          (s/or :user-fn qualified-symbol?
-                :root-el #{'$})
-          any?)
-         (s/every (fn [[k v]]
-                    (or (= '$ k) (fn? v))))))
+  (s/and map? (s/coll-of
+          (s/or :user-fn (s/tuple qualified-symbol?
+                                  fn?)
+                :everything-else (s/tuple simple-symbol?
+                                          (complement fn?))))))
 
 #_"The expression must be a function."
 (s/def ::expression
