@@ -14,8 +14,9 @@
 5. Expression can accept another expression as argument and it will be evaluated for getting it's value and using it as argument to upper expression.
 6. There are context values:
     * $ - root element;
-    * % - current element in expressions that are used inside filter, map, etc;
-7. Dynamic context must be passed and it must contain $ (root element), used external functions. It can contain other elements that were used inside expressions.
+    * % - current element in expressions that are used inside filter, map, etc.
+7. Each lambda function creates new visibility zone with its own curr element. For top level lambda - it is % and %1, for nested lambda - it is %2, for next nexted lambda - it is %3, etc.
+8. Dynamic context can be passed and it can contain $ (root element), used external functions. It can contain other elements that were used inside expressions.
     ```clojure
     {'$ car
      'z {:x 1 :y 2}
@@ -26,11 +27,13 @@
 
 ## Functions:
 
-### `keyword (e.g. :car/color)` - ('keyword' arg1 & args)
-Accepts one or more arguments which can be an atomic value, a collection of datomic
-entities or maps. Applies to each argument clojure function `get`. Returns an atomic
-value, a collection of datomic entities, maps or nil values. Throws error if atomic
-value isn't datomic entity or map.
+### (`'keyword'` arg1 & args) *(e.g. keyword can be :car/color)*
+*argcount* | *type of* `arg1 & args`
+---------- | ----------
+1+         | map, collection of maps, datomic entity, collection of datomic entites
+
+Applies to each argument clojure function `get`.
+Returns an atomic value, a collection of datomic entities, maps or nil values.
 ```clojure
 (:foo {:foo 1} ({:foo 2} {:bar 1}) ()) => (1 2 nil)
 (:foo {:foo 1} ({:foo 2} {:foo 4}) ()) => (1 2 4)
@@ -41,11 +44,14 @@ value isn't datomic entity or map.
 (:foo ((1))) => throws error
 ```
  
-### `=` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Returns true if all atomic values of arguments are equal.
+### (`=` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Returns true if all atomic values of arguments are equal.
 ```clojure
 (= "red" ("green") "blue") => false
 (= "red" ("red") "red") => true
@@ -58,11 +64,14 @@ values have different types. Returns true if all atomic values of arguments are 
 (= "red" ()) => throws error
 ```
 
-### `not=` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Returns true if any atomic values differ from antoher.
+### (`not=` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Returns true if any atomic values differ from antoher.
 ```clojure
 (not= "red" ("green") "blue") => true
 (not= "red" ("red") "red") => false
@@ -74,13 +83,13 @@ values have different types. Returns true if any atomic values differ from antoh
 (not= "red" ()) => throws error
 ```
 
-### `or` - (arg1 arg2 & args)
-Accepts two or more argument expressions.
+### (`or` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | expression which can be evaluated to: atomic value, empty collection, collection of **single** atomic value
+
 Evaluates arguments one at a time, from left to right. 
-Evaluated argument must be an atomic value, empty collection or collection with one element.
-false, empty collection or nil are treated as logical false other values are treated as logical true.
-If an expression returns a logical true value, `or` returns true and doesn't
-evaluate any of the other expressions, otherwise it returns false.
+If an expression returns a logical true (not boolean false and not empty collection and not nil), `or` returns true and doesn't evaluate any of the other expressions, otherwise it returns false.
 ```clojure
 (or nil () false 1 (/ 1 0)) => true
 (or nil ()) => false
@@ -89,13 +98,13 @@ evaluate any of the other expressions, otherwise it returns false.
 (or (()) 1) => throws error
 ```
 
-### `and` - (arg1 arg2 & args)
-Accepts two or more argument expressions.
-Evaluates arguments one at a time, from left to right. 
-Evaluated argument must be an atomic value, empty collection or collection with one element.
-false, empty collection or nil are treated as logical false other values are treated as logical true.
-If an expression returns a logical false value, `and` returns false and doesn't
-evaluate any of the other expressions, otherwise it returns true.
+### (`and` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | expression which can be evaluated to: atomic value, empty collection, collection of **single** atomic value
+
+Evaluates arguments one at a time, from left to right.
+If an expression returns a logical false (boolean false or empty collection or nil), `and` returns false and doesn't evaluate any of the other expressions, otherwise it returns true.
 ```clojure
 (and () (/ 1 0)) => false
 (and 1 "a" :a (now)) => true
@@ -103,10 +112,12 @@ evaluate any of the other expressions, otherwise it returns true.
 (and 1 (())) => throws error
 ```
 
-### `not` - (arg)
-Accepts one argument expression.
-Evaluated argument must be an atomic value, empty collection or collection with one element.
-Returns true if evaluated expression is logical false (false, nil or empty collection), false otherwise.
+### (`not` arg1)
+*argcount* | *type of* `arg1`
+---------- | ----------
+1          | atomic value, empty collection, collection of **single** atomic value.
+
+Returns true if argument is logical false (boolean false or empty collection or nil), false otherwise.
 ```clojure
 (not ()) => true
 (not nil) => true
@@ -117,12 +128,15 @@ Returns true if evaluated expression is logical false (false, nil or empty colle
 (not (())) => throws error
 ```
 
-### `>` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports comparison of numbers and dates. Returns true
-if each successive element strictly more than previous otherwise returns false.
+### (`>` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports comparison of numbers and dates.
+Returns true if each successive element strictly more than previous otherwise returns false.
 ```clojure
 (> 1 2) => false
 (> 2 1 -1) => true
@@ -132,12 +146,15 @@ if each successive element strictly more than previous otherwise returns false.
 (> 2 "1") => throws error
 ```
 
-### `<` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports comparison of numbers and dates. Returns true
-if each successive element strictly less than previous otherwise returns false.
+### (`<` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports comparison of numbers and dates.
+Returns true if each successive element strictly less than previous otherwise returns false.
 ```clojure
 (< 1 2) => true
 (< 1 2 (3)) => true
@@ -148,12 +165,15 @@ if each successive element strictly less than previous otherwise returns false.
 (< 2 "1") => throws error
 ```
 
-### `>=` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports comparison of numbers and dates. Returns true
-if each successive element more or equal than previous otherwise returns false.
+### (`>=` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports comparison of numbers and dates.
+Returns true if each successive element more or equal than previous otherwise returns false.
 ```clojure
 (>= 1 2) => false
 (>= 2 1 -1) => true
@@ -165,12 +185,15 @@ if each successive element more or equal than previous otherwise returns false.
 (>= 2 "1") => throws error
 ```
 
-### `<=` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports comparison of numbers and dates. Returns true
-if each successive element less or equal than previous otherwise returns false.
+### (`<=` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports comparison of numbers and dates.
+Returns true if each successive element less or equal than previous otherwise returns false.
 ```clojure
 (<= 1 2) => true
 (<= 1 2 (3)) => true
@@ -183,12 +206,15 @@ if each successive element less or equal than previous otherwise returns false.
 (<= 2 "1") => throws error
 ```
 
-### `+` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports numbers, dates and strings. Returns sum of all
-elements.
+### (`+` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports numbers, dates and strings.
+Returns sum of all elements.
 ```clojure
 (+ 1 2) => 3
 (+ 1 2 (3)) => 6
@@ -203,11 +229,15 @@ elements.
 (+ "x" nil) => throws error
 ```
 
-### `*` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports numbers. Returns product of all elements.
+### (`*` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports numbers.
+Returns product of all elements.
 ```clojure
 (* 1 2) => 2
 (* 1 2 (3)) => 6
@@ -218,12 +248,15 @@ values have different types. Supports numbers. Returns product of all elements.
 (* 2 nil) => throws error
 ```
 
-### `-` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports numbers and dates. Returns difference between
-first element and sum of all successive elements.
+### (`-` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports numbers and dates.
+Returns difference between first element and sum of all successive elements.
 ```clojure
 (- 1 2) => -1
 (- 1 2 (3)) => -4
@@ -236,12 +269,15 @@ first element and sum of all successive elements.
 (- 2 nil) => throws error
 ```
 
-### `/` - (arg1 arg2 & args)
-Accepts two or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if collection contains more than one element or zero elements.
-Converts collections to atomic values (extracts it's value). Throws error if atomic
-values have different types. Supports numbers. Returns quotient between
-first element and product of all successive elements.
+### (`/` arg1 arg2 & args)
+*argcount* | *type of* `arg1 arg2 & args`
+---------- | ----------
+2+         | atomic value, collection of **single** atomic value
+
+Converts collections to atomic values (extracts it's value).
+Throws error if atomic values have different types.
+Supports numbers.
+Returns quotient between first element and product of all successive elements.
 ```clojure
 (/ 4 2) => 2
 (/ 30 2 5) => 3
@@ -251,10 +287,14 @@ first element and product of all successive elements.
 (/ 2 (nil)) => throws error
 ```
 
-### `sum` - (arg1 & args)
-Accepts one or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if not all atomic values have same types. Supports numbers. Returns
-sum of all elements of all collection.
+### (`sum` arg1 & args)
+*argcount* | *type of* `arg1 & args`
+---------- | ----------
+1+         | atomic value, collection of atomic values
+
+Throws error if not all atomic values have same types.
+Supports numbers.
+Returns sum of all elements of all collection.
 ```clojure
 (sum 1 2) => 3
 (sum 1 2 (3)) => 6
@@ -266,10 +306,14 @@ sum of all elements of all collection.
 (sum 2 (2 nil)) => throws error
 ```
 
-### `product` - (arg1 & args)
-Accepts one or more arguments which can be an atomic value or a collection of atomic
-values. Throws error if not all atomic values have same types. Supports numbers. Returns
-product of all elements of all collection.
+### (`product` arg1 & args)
+*argcount* | *type of* `arg1 & args`
+---------- | ----------
+1+         | atomic value, collection of atomic values
+
+Throws error if not all atomic values have same types.
+Supports numbers.
+Returns product of all elements of all collection.
 ```clojure
 (product 1 2) => 2
 (product 1 2 (3)) => 6
@@ -282,10 +326,12 @@ product of all elements of all collection.
 (product 2 (2 nil)) => throws error
 ```
 
-### `list` - (& args)
-Accepts any number of arguments which must be an atomic value or a collection of atomic values. Throws error if collection contains more than one element or zero elements.
-Returns collection consists
-of passed arguments.
+### (`list` & args)
+*argcount* | *type of* `& args`
+---------- | ----------
+0+         | atomic value, collection of **single** atomic value
+
+Returns collection consists of passed arguments.
 ```clojure
 (list 1 2) => (1 2)
 (list 1 2 (3)) => (1 2 3)
@@ -295,14 +341,14 @@ of passed arguments.
 (list 1 2 (3 4) 5) => throws error
 ```
 
-### `filter` - (pred arg1 & args)
-Accepts two or more arguments. First argument must be an expression which works on atomic
-value and returns atomic value, empty collection or collection with one element. If this expression returns
-false, empty collection or nil they treat as logical false other values treat as logical
-true. Second and other arguments can be an atomic value or collection of atomic values. Function
-processes each atomic value, passes it into pred expression and if pred returns logical true
-then it will be added into resulting collection. Inside pred symbol % may be used in order to
-point on currently proccessing element.
+### (`filter` pred arg1 & args)
+*argcount* | *type of* `pred` | *type of* `arg1 & args`
+---------- | ---------------- | ----------
+2+         | expression which works on atomic value and can be evaluated to: atomic value, empty collection, collection of **single** atomic value | atomic value, collection of atomic values
+
+Function processes each atomic value, passes it into pred expression and if pred returns logical true (not boolean false and not empty collection and not nil) then it will be added into resulting collection.
+Inside pred symbol % may be used in order to point on currently proccessing element.
+
 ```clojure
 (filter (= % 1) (1 2 3) (4 5 6) 1) => (1 1)
 (filter % (1 2 3) (4 5 6 nil false) 7 ()) => (1 2 3 4 5 6 7)
@@ -312,13 +358,13 @@ point on currently proccessing element.
 (filter % 0 (1 (2 3) 4) 5) => throws error
 ```
 
-### `map` - (fn arg1 & args)
-Accepts two or more arguments. First argument must be an expression which works on atomic
-value and returns transformed value.
-Second and other arguments can be an atomic value or collection of atomic values.
-Function processes each atomic value, passes it into
-fn expression and adds it into resulting collection. Inside fn symbol % may be used in order
-to point on currently proccessing element.
+### (`map` fn arg1 & args)
+*argcount* | *type of* `fn` | *type of* `arg1 & args`
+---------- | -------------- | ----------
+2+         | expression which works on atomic value and can be evaluated to: anything | atomic value, collection of atomic values
+
+Function processes each atomic value, passes it into fn expression and adds it into resulting collection.
+Inside fn symbol % may be used in order to point on currently proccessing element.
 If the result of applying fn to an argument is a collection, it will be merged into the resulting collection like the clojure `into` function.
 ```clojure
 (map (+ % 1) (1 2 3) 4 (5)) => (2 3 4 5 6)
@@ -329,11 +375,12 @@ If the result of applying fn to an argument is a collection, it will be merged i
 (map (:x %) (({:x 1} {:y 1}))) => throws error
 ```
 
-### `if` - (test then else)
-Accepts exactly three arguments. Argument test is an expression which must return logical true or
-false (empty collection or nil are treated as logical false other values are treated as logical true).
-Arguments then and else can be any valid expression. If test returns logical true then then expression
-will be evaluated otherwise else expression will be evaluated.
+### (`if` test then else)
+*argcount* | *type of* `test` | *type of* `then else`
+---------- | ---------------- | ----------
+3          | expression which can be evaluated to: atomic value, empty collection, collection of **single** atomic value | expression which can be evaluated to: anything
+
+If test returns logical true (not boolean false and not empty collection and not nil) then then expression will be evaluated otherwise else expression will be evaluated.
 ```clojure
 (if ()
   (+ 1 2)
@@ -346,10 +393,12 @@ will be evaluated otherwise else expression will be evaluated.
   "success") => throws error
 ```
 
-### `select-keys` - (fn arg1 & args)
-Accepts two and more arguments. First argument must be an expression which works on atomic
-value and returns collection of keyword which must be gathered from processing element. Function
-works with maps and datomic entities.
+### (`select-keys` fn arg1 & args)
+*argcount* | *type of* `fn` | *type of* `arg1 & args`
+---------- | -------------- | ----------
+2+         | expression which works on atomic value and can be evaluated to: collection of keywords | map, collection of maps, datomic entity, collection of datomic entites
+
+For each processing element the fn function returns a collection of keys that will be extracted from this processing element.
 ```clojure
 (select-keys (list :x :y)
              ({:x 1 :z 2} {:y 1 :w 2})
@@ -365,9 +414,13 @@ works with maps and datomic entities.
               {"x" 3 111 :a})) => ({"x" 1} {"x" 3 111 :a})
 ```
 
-### `count` - (arg1 & args)
-Accepts one or more arguments. Each argument can be an atomic value or collection. Returns sum
-of all collection lengths. Atomic value is assumed to be a collection with one element.
+### (`count` arg1 & args)
+*argcount* | *type of* `arg1 & args`
+---------- | ----------
+1+         | atomic value, collection of atomic values
+
+Returns sum of all collection lengths.
+Atomic value is assumed to be a collection with one element.
 ```clojure
 (count (1 2 3)) => 3
 (count 1 2 3) => 3
@@ -378,42 +431,64 @@ of all collection lengths. Atomic value is assumed to be a collection with one e
 (count (+ 1 2) (:foo {:foo 1} {:bar 2} ())) => 3
 ```
 
-### `now` - ()
-Accepts no arguments. Returns now datetime.
+### (`now`)
+*argcount* |
+---------- |
+0          |
+
+Returns now datetime.
 ```clojure
 (now) => #inst "2021-01-01T20:00"
 ```
 
-### `years`, `months`, `days`, `weeks`, `hours`, `minutes` - (n)
-Accepts one argument which must be a number. Returns structure that can be used for adding or
-subtracting to date.
+### (`years` n), (`months` n), (`days` n), (`weeks` n), (`hours` n), (`minutes` n)
+*argcount* | *type of* `n`
+---------- | ----------
+1          | integer number
+
+Returns structure that can be used for adding or subtracting to date.
 ```clojure
 (years 1) => <not graphical representation>
 (months 7) => <not graphical representation>
 ```
 
-### `year-start`, `month-start`, `day-start` - (d)
-Accepts one argument which must be a datetime. Returns start of the year, month or day respectively.
+### (`year-start` d), (`month-start` d), (`day-start` d)
+*argcount* | *type of* `d`
+---------- | ----------
+1          | datetime
+
+Returns start of the year, month or day respectively.
 ```clojure
 (year-start (date 2010 10 10)) => #inst "2010-01-01T00:00"
 (month-start (date 2010 10 10)) => #inst "2010-10-01T00:00"
 (day-start (datetime 2010 10 10 10 00)) => #inst "2010-10-10T00:00"
 ```
 
-### `date` - (year month day)
-Accepts three arguments which must be a numbers. Returns start of the date.
+### (`date` year month day)
+*argcount* | *type of* `year` | *type of* `month day`
+---------- | ---------------- | ----------
+3          | integer number   | positive integer number
+
+Returns start of the date.
 ```clojure
 (date 2010 10 10) => #inst "2010-10-10"
 ```
 
-### `datetime` - (year month day hour minute)
-Accepts five arguments which must be a number. Returns date with particular time.
+### (`datetime` year month day hour minute)
+*argcount* | *type of* `year` | *type of* `month day`   | *type of* `hour minute`
+---------- | ---------------- | ----------------------- | ----------
+3          | integer number   | positive integer number | non-negative integer number
+
+Returns date with particular time.
 ```clojure
 (datetime 2010 10 10 17 00) => #inst "2010-10-10T17:00:00"
 ```
 
-### `at-zone` (datetime timezone)
-Accepts two arguments. First argument must be a datetime and second argument must be a timezone.
+### (`at-zone` datetime timezone)
+*argcount* | *type of* `datetime` | *type of* `timezone`
+---------- | ---------------- | ----------
+2          | datetime         | string
+
 Converts datetime to timezone datetime.
 ```clojure
 (at-zone (datetime 2010 10 10 3 0) "Europe/Moscow") => #inst "2010-10-10T06:00"
@@ -422,8 +497,7 @@ Converts datetime to timezone datetime.
 
 ## More complex examples:
 
-Check that car has black color. Search inside :car-state with feature :color
-and extracts value-code from it.
+Check that car has black color. Search inside :car-state with feature :color and extracts value-code from it.
 ```clojure
 (evaluate
  (str '(=
@@ -434,8 +508,7 @@ and extracts value-code from it.
  {'$ car})
 ```
 
-Searches car-states for feature with id 70 or 90, extracts their long-value,
-sum their values and compare with 1000.
+Searches car-states for feature with id 70 or 90, extracts their long-value, sum their values and compare with 1000.
 ```clojure
 (evaluate
  (str '(>
